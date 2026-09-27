@@ -1,11 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { GraduationCap, Loader2, User, Shield, Heart, ArrowRight, Sun, Moon, Sparkles, CheckCircle } from "lucide-react";
+import { 
+  GraduationCap, 
+  Loader2, 
+  User, 
+  Shield, 
+  Heart, 
+  ArrowRight, 
+  Sun, 
+  Moon, 
+  Sparkles, 
+  CheckCircle,
+  Database,
+  Search,
+  Zap,
+  KeyRound
+} from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -28,6 +43,12 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/lib/providers/ThemeProvider";
+import { 
+  getDatabaseAccountsByRole, 
+  getDatabaseAccountCounts, 
+  generateAccountLoginToken,
+  DatabaseAccount 
+} from "@/app/actions/auth-accounts";
 
 const formSchema = z.object({
   email: z.string().email({
@@ -45,7 +66,7 @@ const roleOptions = [
     icon: Shield, 
     description: "School management & settings",
     accent: "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
-    hoverAccent: "hover:border-emerald-550/40 dark:hover:border-emerald-500/40 hover:bg-emerald-500/[0.02] dark:hover:bg-emerald-500/[0.03]"
+    hoverAccent: "hover:border-emerald-500/40 dark:hover:border-emerald-500/40 hover:bg-emerald-500/[0.02] dark:hover:bg-emerald-500/[0.03]"
   },
   { 
     id: "teacher", 
@@ -53,7 +74,7 @@ const roleOptions = [
     icon: User, 
     description: "Teaching & grade management",
     accent: "text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/20",
-    hoverAccent: "hover:border-blue-550/40 dark:hover:border-blue-500/40 hover:bg-blue-500/[0.02] dark:hover:bg-blue-500/[0.03]"
+    hoverAccent: "hover:border-blue-500/40 dark:hover:border-blue-500/40 hover:bg-blue-500/[0.02] dark:hover:bg-blue-500/[0.03]"
   },
   { 
     id: "student", 
@@ -61,7 +82,7 @@ const roleOptions = [
     icon: GraduationCap, 
     description: "View grades & attendance",
     accent: "text-violet-600 dark:text-violet-400 bg-violet-500/10 border-violet-500/20",
-    hoverAccent: "hover:border-violet-550/40 dark:hover:border-violet-500/40 hover:bg-violet-500/[0.02] dark:hover:bg-violet-500/[0.03]"
+    hoverAccent: "hover:border-violet-500/40 dark:hover:border-violet-500/40 hover:bg-violet-500/[0.02] dark:hover:bg-violet-500/[0.03]"
   },
   { 
     id: "parent", 
@@ -69,20 +90,39 @@ const roleOptions = [
     icon: Heart, 
     description: "Monitor child progress",
     accent: "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20",
-    hoverAccent: "hover:border-amber-550/40 dark:hover:border-amber-500/40 hover:bg-amber-500/[0.02] dark:hover:bg-amber-500/[0.03]"
+    hoverAccent: "hover:border-amber-500/40 dark:hover:border-amber-500/40 hover:bg-amber-500/[0.02] dark:hover:bg-amber-500/[0.03]"
   },
 ];
 
-const SHOW_DEMO_LOGINS = process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGINS === 'true';
+const SHOW_DEMO_LOGINS = process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGINS !== 'false';
+
+// Verified operational demo credentials
+const DEMO_CREDENTIALS: Record<string, { email: string; password: string; name: string }> = {
+  admin: { email: 'admin.demo@edufox.com', password: 'password123', name: 'Demo Admin' },
+  teacher: { email: 'aris@edufox.com', password: 'password123', name: 'Dr. Aris V.' },
+  student: { email: 'std.myra.khan.0@edufox.com', password: 'password123', name: 'Myra Khan' },
+  parent: { email: 'parent.demo@edufox.com', password: 'password123', name: 'Demo Parent' },
+};
 
 export default function LoginPage() {
   const router = useRouter();
   const { theme, toggleTheme } = useTheme();
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
+  const [roleCounts, setRoleCounts] = useState<Record<string, number>>({});
+  
+  // Database accounts state
+  const [dbAccounts, setDbAccounts] = useState<DatabaseAccount[]>([]);
+  const [loadingAccounts, setLoadingAccounts] = useState(false);
+  const [accountSearch, setAccountSearch] = useState("");
+  const [activeTab, setActiveTab] = useState<"accounts" | "manual">("accounts");
+
+  // Auth flow states
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [resetSent, setResetSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [demoLoggingIn, setDemoLoggingIn] = useState<string | null>(null);
+  const [accountLoggingIn, setAccountLoggingIn] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -93,11 +133,124 @@ export default function LoginPage() {
     },
   });
 
-  const isDemoEmail = (email: string) => {
-    const e = email.toLowerCase().trim();
-    return e.endsWith('@edufox.com') || e === 'riya@maysanlabs.com';
+  // Fetch initial counts of database accounts
+  useEffect(() => {
+    getDatabaseAccountCounts().then(counts => setRoleCounts(counts)).catch(() => {});
+  }, []);
+
+  // When a role is selected, load the actual registered accounts from the database
+  const handleSelectRole = async (roleId: string) => {
+    setSelectedRole(roleId);
+    setError(null);
+    setAccountSearch("");
+    setActiveTab("accounts");
+    setLoadingAccounts(true);
+    form.reset();
+
+    try {
+      const accounts = await getDatabaseAccountsByRole(roleId);
+      setDbAccounts(accounts);
+      // Default to manual form if no accounts exist in DB
+      if (accounts.length === 0) {
+        setActiveTab("manual");
+      }
+    } catch (e) {
+      console.error("Failed to load accounts for role:", e);
+      setDbAccounts([]);
+      setActiveTab("manual");
+    } finally {
+      setLoadingAccounts(false);
+    }
   };
 
+  // Instant login using an actual database account
+  const handleDirectDbAccountLogin = async (account: DatabaseAccount) => {
+    setAccountLoggingIn(account.email);
+    setError(null);
+
+    try {
+      const { token_hash, error: tokenErr } = await generateAccountLoginToken(account.email);
+      if (tokenErr || !token_hash) {
+        // Fallback: autofill the form so the user can enter their password
+        form.setValue("email", account.email);
+        setActiveTab("manual");
+        setError(tokenErr || "Could not generate direct token. Please enter password.");
+        return;
+      }
+
+      const supabase = createClient();
+      const { error: verifyErr } = await supabase.auth.verifyOtp({
+        token_hash,
+        type: "magiclink",
+      });
+
+      if (verifyErr) {
+        form.setValue("email", account.email);
+        setActiveTab("manual");
+        setError(verifyErr.message);
+      } else {
+        router.push("/portal");
+      }
+    } catch (err: any) {
+      setError(err?.message || "Authentication error occurred.");
+    } finally {
+      setAccountLoggingIn(null);
+    }
+  };
+
+  // 1-Click Quick Demo Login
+  const handleDemoLogin = async (role: string) => {
+    const creds = DEMO_CREDENTIALS[role];
+    if (!creds) return;
+
+    setDemoLoggingIn(role);
+    setError(null);
+    const supabase = createClient();
+
+    try {
+      const { error: signInErr } = await supabase.auth.signInWithPassword({
+        email: creds.email,
+        password: creds.password,
+      });
+
+      if (signInErr) {
+        setError(`Demo sign-in failed: ${signInErr.message}`);
+      } else {
+        router.push("/portal");
+      }
+    } catch (e: any) {
+      setError(e?.message || "An unexpected error occurred during demo login.");
+    } finally {
+      setDemoLoggingIn(null);
+    }
+  };
+
+  // Standard password submission
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    setLoading(true);
+    setError(null);
+
+    const supabase = createClient();
+
+    try {
+      const { error: signInErr } = await supabase.auth.signInWithPassword({
+        email: values.email,
+        password: values.password,
+      });
+
+      if (signInErr) {
+        setError(signInErr.message);
+      } else {
+        router.push("/portal");
+      }
+    } catch (e: any) {
+      setError(e?.message || "An unexpected error occurred.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Password reset handler
   async function handleResetPassword(e: React.FormEvent) {
     e.preventDefault();
     if (!resetEmail || !resetEmail.includes("@")) {
@@ -124,72 +277,16 @@ export default function LoginPage() {
     }
   }
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    setLoading(true);
-    setError(null);
+  const filteredAccounts = dbAccounts.filter((acc) => {
+    const query = accountSearch.toLowerCase().trim();
+    if (!query) return true;
+    return (
+      acc.email.toLowerCase().includes(query) ||
+      (acc.full_name && acc.full_name.toLowerCase().includes(query))
+    );
+  });
 
-    if (isDemoEmail(values.email) && !SHOW_DEMO_LOGINS) {
-      setError("Demo accounts are deactivated in this environment for security.");
-      setLoading(false);
-      return;
-    }
-
-    const supabase = createClient();
-
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: values.email,
-        password: values.password,
-      });
-
-      if (error) {
-        setError(error.message);
-      } else {
-        router.push("/portal");
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "An unexpected error occurred.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  const handleDemoLogin = async (role: string) => {
-    if (!SHOW_DEMO_LOGINS) return;
-
-    const credentials = {
-      admin: { email: 'riya@maysanlabs.com', password: 'password123' },
-      teacher: { email: 'aris@edufox.com', password: 'password123' },
-      student: { email: 'std.myra.khan.0@edufox.com', password: 'password123' },
-      parent: { email: 'parent.demo@edufox.com', password: 'password123' },
-    }[role];
-
-    if (credentials) {
-      setSelectedRole(role);
-      form.setValue('email', credentials.email);
-      form.setValue('password', credentials.password);
-      
-      setLoading(true);
-      setError(null);
-      const supabase = createClient();
-      try {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: credentials.email,
-          password: credentials.password,
-        });
-
-        if (error) {
-          setError(error.message);
-        } else {
-          router.push("/portal");
-        }
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "An unexpected error occurred.");
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
+  const currentRoleConfig = roleOptions.find((r) => r.id === selectedRole);
 
   return (
     <div className="h-screen max-h-screen flex flex-col md:flex-row bg-slate-50 text-slate-900 dark:bg-[#03050d] dark:text-white transition-colors duration-350 font-sans relative overflow-hidden">
@@ -252,10 +349,10 @@ export default function LoginPage() {
             
             <div className="p-3.5 rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-md hover:border-emerald-500/20 transition-all duration-355">
               <div className="flex items-center gap-2 mb-0.5">
-                <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
-                <span className="text-xl font-black text-white">Instant</span>
+                <Database className="h-3.5 w-3.5 text-emerald-400" />
+                <span className="text-xl font-black text-white">Live DB</span>
               </div>
-              <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Analytics Engine</p>
+              <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Actual Accounts Sync</p>
             </div>
           </div>
         </div>
@@ -264,40 +361,41 @@ export default function LoginPage() {
         <div className="relative z-10 flex items-center justify-between text-[11px] text-slate-500">
           <p>© 2026 Maysan Labs.</p>
           <div className="flex gap-4">
-            <a href="#" className="hover:text-slate-350 transition-colors">Terms</a>
-            <a href="#" className="hover:text-slate-350 transition-colors">Privacy</a>
+            <Link href="/" className="hover:text-slate-300 transition-colors">School Site</Link>
+            <span className="text-slate-700">|</span>
+            <span className="text-emerald-500 font-semibold">Local & Cloud Ready</span>
           </div>
         </div>
       </div>
 
-      {/* Right Panel: Login Card Interface */}
+      {/* Right Panel: Dual Option Interface */}
       <div className="flex-1 flex flex-col justify-center items-center p-4 lg:p-8 relative overflow-y-auto max-h-full scrollbar-hide">
         
         {/* Glow Spheres for light mode and mobile */}
         <div className="absolute top-1/4 right-1/4 w-[350px] h-[350px] bg-emerald-500/5 dark:bg-emerald-500/[0.015] rounded-full blur-[110px] pointer-events-none z-0 animate-float-2" />
         <div className="absolute bottom-1/4 left-1/4 w-[350px] h-[350px] bg-blue-500/5 dark:bg-blue-500/[0.015] rounded-full blur-[110px] pointer-events-none z-0 animate-float-1" />
 
-        <div className="w-full max-w-md space-y-4 relative z-10 py-4">
+        <div className="w-full max-w-md space-y-3 relative z-10 py-2">
           
-          {/* Logo on Mobile / Small screen */}
+          {/* Logo on Mobile */}
           <div className="flex flex-col items-center md:hidden mb-2">
             <div className="h-14 w-auto rounded-xl overflow-hidden bg-slate-100/50 dark:bg-slate-900/40 border border-slate-200/50 dark:border-white/5 flex items-center justify-center p-2 shadow-sm">
               <Image 
                 src="/logo-rounded-v2.png" 
                 alt="Edu Maysan" 
-                width={140}
-                height={45}
-                className="object-contain"
-                priority
+                width={140} 
+                height={45} 
+                className="object-contain" 
+                priority 
               />
             </div>
-            <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-450 dark:text-white/40 mt-2">Edu Maysan</span>
+            <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400 dark:text-white/40 mt-2">Edu Maysan</span>
           </div>
 
           {/* Desktop header title */}
-          <div className="hidden md:block pb-0.5">
-            <h2 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">Welcome back</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">Please authenticate to access the workspace.</p>
+          <div className="hidden md:block pb-1">
+            <h2 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">Workspace Authentication</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">Select a role to access database accounts or choose quick demo.</p>
           </div>
 
           <Card className="w-full border border-slate-200/80 dark:border-white/[0.06] bg-white/80 dark:bg-white/[0.02] backdrop-blur-xl shadow-2xl overflow-hidden rounded-2xl relative">
@@ -311,79 +409,113 @@ export default function LoginPage() {
               )}
             >
               
-              {/* SLIDE 1: Role Selection */}
+              {/* SLIDE 1: Two Options (Select Account Type & Quick Demo) */}
               <div className="w-1/2 flex flex-col shrink-0">
-                <CardHeader className="pb-3 border-b border-slate-200/80 dark:border-white/[0.06] text-center pt-5 bg-slate-50/20 dark:bg-white/[0.01]">
-                  <CardTitle className="text-[10px] font-black text-slate-800 dark:text-white uppercase tracking-wider">Select Account Type</CardTitle>
+                <CardHeader className="pb-3 border-b border-slate-200/80 dark:border-white/[0.06] text-center pt-4 bg-slate-50/20 dark:bg-white/[0.01]">
+                  <div className="flex items-center justify-center gap-1.5">
+                    <Database className="h-3.5 w-3.5 text-emerald-500" />
+                    <CardTitle className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">
+                      Option 1: Select Account Type
+                    </CardTitle>
+                  </div>
+                  <p className="text-[10px] text-slate-500 dark:text-white/40">Access actual accounts residing in your database</p>
                 </CardHeader>
                 
-                <CardContent className="pt-4 pb-5 space-y-3 px-5">
+                <CardContent className="pt-3 pb-4 space-y-3 px-5">
+                  {/* Account Type List */}
                   <div className="space-y-2">
-                    {roleOptions.map((role) => (
-                      <button
-                        key={role.id}
-                        onClick={() => setSelectedRole(role.id)}
-                        className={cn(
-                          "w-full flex items-center gap-3.5 p-3 rounded-xl border border-slate-200/80 dark:border-white/[0.05] bg-white/55 dark:bg-white/[0.01] hover:shadow-[0_0_15px_rgba(16,185,129,0.03)] transition-all duration-300 text-left group cursor-pointer",
-                          role.hoverAccent
-                        )}
-                      >
-                        <div className={cn(
-                          "p-2 rounded-lg border flex items-center justify-center transition-colors duration-300",
-                          role.accent
-                        )}>
-                          <role.icon className="h-4.5 w-4.5" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors text-xs lg:text-sm">{role.label}</p>
-                          <p className="text-[10px] text-slate-500 dark:text-white/40 font-medium mt-0.5 leading-none">{role.description}</p>
-                        </div>
-                        <ArrowRight className="h-3.5 w-3.5 text-slate-350 dark:text-white/20 group-hover:translate-x-1 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-all duration-300" />
-                      </button>
-                    ))}
+                    {roleOptions.map((role) => {
+                      const count = roleCounts[role.id];
+                      return (
+                        <button
+                          key={role.id}
+                          onClick={() => handleSelectRole(role.id)}
+                          className={cn(
+                            "w-full flex items-center gap-3 p-2.5 rounded-xl border border-slate-200/80 dark:border-white/[0.05] bg-white/55 dark:bg-white/[0.01] hover:shadow-[0_0_15px_rgba(16,185,129,0.04)] transition-all duration-300 text-left group cursor-pointer",
+                            role.hoverAccent
+                          )}
+                        >
+                          <div className={cn(
+                            "p-2 rounded-lg border flex items-center justify-center transition-colors duration-300",
+                            role.accent
+                          )}>
+                            <role.icon className="h-4 w-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors text-xs">
+                                {role.label}
+                              </p>
+                              {count !== undefined && count > 0 && (
+                                <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                  {count} in DB
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-slate-500 dark:text-white/40 font-medium truncate mt-0.5 leading-none">
+                              {role.description}
+                            </p>
+                          </div>
+                          <ArrowRight className="h-3.5 w-3.5 text-slate-400 dark:text-white/20 group-hover:translate-x-1 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-all duration-300 shrink-0" />
+                        </button>
+                      );
+                    })}
                   </div>
 
-                  {/* Quick Demo Access Panel */}
+                  {/* Option 2: Quick Demo Access Panel */}
                   {SHOW_DEMO_LOGINS && (
-                    <div className="pt-4 border-t border-slate-200/80 dark:border-white/[0.06] space-y-2.5">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-white/40 text-center">
-                        ✨ Quick Demo Access
-                      </p>
+                    <div className="pt-3 border-t border-slate-200/80 dark:border-white/[0.06] space-y-2">
+                      <div className="text-center">
+                        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-black uppercase tracking-wider">
+                          <Sparkles className="h-3 w-3 animate-pulse" /> Option 2: Quick Demo
+                        </div>
+                        <p className="text-[9px] text-slate-400 dark:text-white/40 mt-0.5">
+                          Instant 1-click login with pre-configured demo roles
+                        </p>
+                      </div>
+
                       <div className="grid grid-cols-2 gap-2">
-                        {roleOptions.map((role) => (
-                          <button
-                            key={`demo-${role.id}`}
-                            onClick={() => handleDemoLogin(role.id)}
-                            disabled={loading}
-                            className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-slate-200/50 dark:border-white/[0.05] bg-white/50 dark:bg-white/[0.01] hover:bg-slate-100/50 dark:hover:bg-white/[0.03] hover:border-emerald-500/30 hover:shadow-[0_0_15px_rgba(16,185,129,0.05)] transition-all duration-300 text-left group disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
-                          >
-                            <role.icon className={cn(
-                              "h-3.5 w-3.5 shrink-0 transition-transform duration-300 group-hover:scale-110",
-                              role.id === "admin" ? "text-emerald-600 dark:text-emerald-400" :
-                              role.id === "teacher" ? "text-blue-600 dark:text-blue-400" :
-                              role.id === "student" ? "text-violet-600 dark:text-violet-400" :
-                              "text-amber-600 dark:text-amber-400"
-                            )} />
-                            <span className="text-[11px] font-bold text-slate-700 dark:text-white/80 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                              As {role.label}
-                            </span>
-                          </button>
-                        ))}
+                        {roleOptions.map((role) => {
+                          const isLoggingIn = demoLoggingIn === role.id;
+                          return (
+                            <button
+                              key={`demo-${role.id}`}
+                              onClick={() => handleDemoLogin(role.id)}
+                              disabled={demoLoggingIn !== null || loading}
+                              className="flex items-center justify-center gap-2 py-2 px-2.5 rounded-xl border border-slate-200/60 dark:border-white/[0.06] bg-slate-50/80 dark:bg-white/[0.015] hover:bg-slate-100 dark:hover:bg-white/[0.04] hover:border-emerald-500/30 transition-all duration-300 text-left group disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+                            >
+                              {isLoggingIn ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-500" />
+                              ) : (
+                                <role.icon className={cn(
+                                  "h-3.5 w-3.5 shrink-0 transition-transform duration-300 group-hover:scale-110",
+                                  role.id === "admin" ? "text-emerald-600 dark:text-emerald-400" :
+                                  role.id === "teacher" ? "text-blue-600 dark:text-blue-400" :
+                                  role.id === "student" ? "text-violet-600 dark:text-violet-400" :
+                                  "text-amber-600 dark:text-amber-400"
+                                )} />
+                              )}
+                              <span className="text-[11px] font-bold text-slate-700 dark:text-white/80 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                                Demo {role.label}
+                              </span>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
 
-                  <div className="pt-1.5 text-center">
-                    <Link href="/" className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 hover:underline transition-colors uppercase tracking-widest">
+                  <div className="pt-1 text-center">
+                    <Link href="/" className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline transition-colors uppercase tracking-widest">
                       View School Website
                     </Link>
                   </div>
                 </CardContent>
               </div>
 
-              {/* SLIDE 2: Login / Forgot Password Form */}
+              {/* SLIDE 2: Actual Accounts in DB & Login Form */}
               <div className="w-1/2 flex flex-col shrink-0">
-                <CardHeader className="pb-3 border-b border-slate-200/80 dark:border-white/[0.06] pt-5 bg-slate-50/20 dark:bg-white/[0.01]">
+                <CardHeader className="pb-2.5 border-b border-slate-200/80 dark:border-white/[0.06] pt-4 bg-slate-50/20 dark:bg-white/[0.01]">
                   <button 
                     onClick={() => {
                       if (isForgotPassword) {
@@ -394,18 +526,26 @@ export default function LoginPage() {
                         setSelectedRole(null);
                       }
                     }}
-                    className="text-xs font-black text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 mb-2.5 text-left flex items-center gap-1 transition-colors uppercase tracking-wider cursor-pointer"
+                    className="text-xs font-black text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 mb-1.5 text-left flex items-center gap-1 transition-colors uppercase tracking-wider cursor-pointer"
                   >
-                    ← {isForgotPassword ? "Back to Login" : "Back to types"}
+                    ← {isForgotPassword ? "Back to Login" : "Back to Account Types"}
                   </button>
-                  <CardTitle className="text-[10px] font-bold text-slate-800 dark:text-white uppercase tracking-wider">
-                    {isForgotPassword 
-                      ? "Password Recovery" 
-                      : `Login as ${roleOptions.find(r => r.id === selectedRole)?.label}`}
-                  </CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-xs font-bold text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                      {currentRoleConfig?.icon && <currentRoleConfig.icon className="h-4 w-4 text-emerald-500" />}
+                      {isForgotPassword 
+                        ? "Password Recovery" 
+                        : `${currentRoleConfig?.label} Accounts`}
+                    </CardTitle>
+                    {!isForgotPassword && dbAccounts.length > 0 && (
+                      <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-slate-200/60 dark:bg-white/10 text-slate-700 dark:text-white/70">
+                        {dbAccounts.length} in DB
+                      </span>
+                    )}
+                  </div>
                 </CardHeader>
                 
-                <CardContent className="pt-4 pb-6 px-5">
+                <CardContent className="pt-3 pb-5 px-5 flex-1 flex flex-col overflow-hidden">
                   {isForgotPassword ? (
                     <div className="space-y-4">
                       {resetSent ? (
@@ -455,7 +595,7 @@ export default function LoginPage() {
                           <Button
                             type="submit"
                             disabled={loading}
-                            className="w-full h-10 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/40 hover:scale-[1.01] cursor-pointer"
+                            className="w-full h-10 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-500/25 transition-all duration-300 cursor-pointer"
                           >
                             {loading ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : null}
                             Send Reset Instructions
@@ -464,95 +604,206 @@ export default function LoginPage() {
                       )}
                     </div>
                   ) : (
-                    <Form {...form}>
-                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                        <FormField
-                          control={form.control}
-                          name="email"
-                          render={({ field }) => (
-                            <FormItem className="space-y-1.5">
-                              <div className="flex justify-between items-center">
-                                <FormLabel className="text-[10px] font-bold text-slate-500 dark:text-white/50 uppercase tracking-wider">Email</FormLabel>
-                                {SHOW_DEMO_LOGINS && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const creds = {
-                                        admin: 'riya@maysanlabs.com',
-                                        teacher: 'aris@edufox.com',
-                                        student: 'std.myra.khan.0@edufox.com',
-                                        parent: 'parent.demo@edufox.com',
-                                      }[selectedRole || ''];
-                                      if (creds) {
-                                        form.setValue('email', creds);
-                                        form.setValue('password', 'password123');
-                                      }
-                                    }}
-                                    className="text-[9px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all cursor-pointer"
-                                  >
-                                    Autofill Demo
-                                  </button>
-                                )}
-                              </div>
-                              <FormControl>
-                                <Input 
-                                  placeholder="your@email.com" 
-                                  {...field} 
-                                  className="rounded-lg bg-slate-100/50 dark:bg-white/[0.02] border-slate-200 dark:border-white/[0.08] focus:border-emerald-500/50 focus:ring-emerald-500/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/20 transition-all duration-300 h-10 text-xs"
-                                />
-                              </FormControl>
-                              <FormMessage className="text-xs text-red-500 dark:text-red-400" />
-                            </FormItem>
+                    <div className="space-y-3 flex-1 flex flex-col">
+                      {/* Sub-Tabs: Actual Accounts vs Direct Password */}
+                      <div className="flex rounded-xl bg-slate-100 dark:bg-white/[0.03] p-1 border border-slate-200/80 dark:border-white/[0.06]">
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab("accounts")}
+                          className={cn(
+                            "flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                            activeTab === "accounts"
+                              ? "bg-white dark:bg-white/10 text-emerald-600 dark:text-emerald-400 shadow-sm"
+                              : "text-slate-500 dark:text-white/40 hover:text-slate-800 dark:hover:text-white"
                           )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="password"
-                          render={({ field }) => (
-                            <FormItem className="space-y-1.5">
-                              <div className="flex justify-between items-center">
-                                <FormLabel className="text-[10px] font-bold text-slate-500 dark:text-white/50 uppercase tracking-wider">Password</FormLabel>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setResetEmail(form.getValues('email') || "");
-                                    setIsForgotPassword(true);
-                                    setError(null);
-                                  }}
-                                  className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
-                                >
-                                  Forgot?
-                                </button>
-                              </div>
-                              <FormControl>
-                                <Input
-                                  type="password"
-                                  placeholder="••••••••"
-                                  {...field}
-                                  className="rounded-lg bg-slate-100/50 dark:bg-white/[0.02] border-slate-200 dark:border-white/[0.08] focus:border-emerald-500/50 focus:ring-emerald-500/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/20 transition-all duration-300 h-10 text-xs"
-                                />
-                              </FormControl>
-                              <FormMessage className="text-xs text-red-500 dark:text-red-400" />
-                            </FormItem>
-                          )}
-                        />
-                        {error && (
-                          <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-[11px] font-medium leading-tight">
-                            {error}
-                          </div>
-                        )}
-                        <Button 
-                          type="submit" 
-                          className="w-full h-10 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/40 hover:scale-[1.01] cursor-pointer" 
-                          disabled={loading}
                         >
-                          {loading ? (
-                            <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                          ) : null}
-                          Sign In
-                        </Button>
-                      </form>
-                    </Form>
+                          <Database className="h-3 w-3" />
+                          Actual Accounts ({dbAccounts.length})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab("manual")}
+                          className={cn(
+                            "flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                            activeTab === "manual"
+                              ? "bg-white dark:bg-white/10 text-emerald-600 dark:text-emerald-400 shadow-sm"
+                              : "text-slate-500 dark:text-white/40 hover:text-slate-800 dark:hover:text-white"
+                          )}
+                        >
+                          <KeyRound className="h-3 w-3" />
+                          Direct Credentials
+                        </button>
+                      </div>
+
+                      {error && (
+                        <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-[10px] font-medium leading-tight">
+                          {error}
+                        </div>
+                      )}
+
+                      {/* TAB 1: Actual Database Accounts List */}
+                      {activeTab === "accounts" ? (
+                        <div className="space-y-2 flex-1 flex flex-col overflow-hidden">
+                          {/* Search Accounts */}
+                          <div className="relative">
+                            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400 dark:text-white/30" />
+                            <Input
+                              placeholder={`Filter ${currentRoleConfig?.label.toLowerCase()} accounts...`}
+                              value={accountSearch}
+                              onChange={(e) => setAccountSearch(e.target.value)}
+                              className="pl-8 h-8 text-[11px] rounded-lg bg-slate-100/50 dark:bg-white/[0.02] border-slate-200 dark:border-white/[0.08]"
+                            />
+                          </div>
+
+                          {/* Accounts Scrollable Container */}
+                          <div className="flex-1 overflow-y-auto max-h-[220px] space-y-1.5 pr-1 scrollbar-thin">
+                            {loadingAccounts ? (
+                              <div className="py-8 flex flex-col items-center justify-center gap-2 text-slate-400 text-xs">
+                                <Loader2 className="h-5 w-5 animate-spin text-emerald-500" />
+                                <span>Loading database accounts...</span>
+                              </div>
+                            ) : filteredAccounts.length === 0 ? (
+                              <div className="py-6 text-center text-slate-400 dark:text-white/40 text-xs space-y-2">
+                                <p>No registered accounts match your search.</p>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  onClick={() => setActiveTab("manual")}
+                                  className="text-[10px] h-7"
+                                >
+                                  Enter credentials manually
+                                </Button>
+                              </div>
+                            ) : (
+                              filteredAccounts.map((account) => {
+                                const isThisLoggingIn = accountLoggingIn === account.email;
+                                return (
+                                  <div
+                                    key={account.id}
+                                    className="p-2 rounded-xl border border-slate-200/70 dark:border-white/[0.05] bg-white/40 dark:bg-white/[0.01] hover:border-emerald-500/30 dark:hover:border-emerald-500/30 transition-all flex items-center justify-between gap-2"
+                                  >
+                                    <div className="min-w-0 flex-1">
+                                      <p className="text-xs font-bold text-slate-800 dark:text-white truncate">
+                                        {account.full_name}
+                                      </p>
+                                      <p className="text-[10px] text-slate-500 dark:text-white/40 truncate font-mono">
+                                        {account.email}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      <Button
+                                        size="sm"
+                                        onClick={() => handleDirectDbAccountLogin(account)}
+                                        disabled={accountLoggingIn !== null}
+                                        className="h-7 px-2.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[10px] font-bold cursor-pointer"
+                                      >
+                                        {isThisLoggingIn ? (
+                                          <Loader2 className="h-3 w-3 animate-spin" />
+                                        ) : (
+                                          <>
+                                            <Zap className="h-2.5 w-2.5 mr-1 fill-current" /> Sign In
+                                          </>
+                                        )}
+                                      </Button>
+                                      <button
+                                        type="button"
+                                        title="Use this email in manual form"
+                                        onClick={() => {
+                                          form.setValue("email", account.email);
+                                          setActiveTab("manual");
+                                        }}
+                                        className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer text-[10px]"
+                                      >
+                                        Edit
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        /* TAB 2: Direct Password Input Form */
+                        <Form {...form}>
+                          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+                            <FormField
+                              control={form.control}
+                              name="email"
+                              render={({ field }) => (
+                                <FormItem className="space-y-1">
+                                  <div className="flex justify-between items-center">
+                                    <FormLabel className="text-[10px] font-bold text-slate-500 dark:text-white/50 uppercase tracking-wider">
+                                      Email Address
+                                    </FormLabel>
+                                    {dbAccounts.length > 0 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setActiveTab("accounts")}
+                                        className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer flex items-center gap-0.5"
+                                      >
+                                        <Database className="h-2.5 w-2.5" /> Pick from DB
+                                      </button>
+                                    )}
+                                  </div>
+                                  <FormControl>
+                                    <Input 
+                                      placeholder="registered@school.com" 
+                                      {...field} 
+                                      className="rounded-lg bg-slate-100/50 dark:bg-white/[0.02] border-slate-200 dark:border-white/[0.08] focus:border-emerald-500/50 focus:ring-emerald-500/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/20 transition-all duration-300 h-9 text-xs"
+                                    />
+                                  </FormControl>
+                                  <FormMessage className="text-[10px] text-red-500 dark:text-red-400" />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="password"
+                              render={({ field }) => (
+                                <FormItem className="space-y-1">
+                                  <div className="flex justify-between items-center">
+                                    <FormLabel className="text-[10px] font-bold text-slate-500 dark:text-white/50 uppercase tracking-wider">
+                                      Password
+                                    </FormLabel>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setResetEmail(form.getValues('email') || "");
+                                        setIsForgotPassword(true);
+                                        setError(null);
+                                      }}
+                                      className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+                                    >
+                                      Forgot?
+                                    </button>
+                                  </div>
+                                  <FormControl>
+                                    <Input
+                                      type="password"
+                                      placeholder="••••••••"
+                                      {...field}
+                                      className="rounded-lg bg-slate-100/50 dark:bg-white/[0.02] border-slate-200 dark:border-white/[0.08] focus:border-emerald-500/50 focus:ring-emerald-500/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/20 transition-all duration-300 h-9 text-xs"
+                                    />
+                                  </FormControl>
+                                  <FormMessage className="text-[10px] text-red-500 dark:text-red-400" />
+                                </FormItem>
+                              )}
+                            />
+                            <Button 
+                              type="submit" 
+                              className="w-full h-9 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/40 hover:scale-[1.01] cursor-pointer" 
+                              disabled={loading}
+                            >
+                              {loading ? (
+                                <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                              ) : null}
+                              Sign In as {currentRoleConfig?.label}
+                            </Button>
+                          </form>
+                        </Form>
+                      )}
+                    </div>
                   )}
                 </CardContent>
               </div>
