@@ -28,6 +28,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { UnifiedPageHeader } from "@/components/shared/UnifiedPageHeader";
 import { DashboardStatCard } from "@/components/shared/DashboardStatCard";
+import { toast } from "sonner";
 
 interface InsightsDashboardProps {
     systemMetrics: any;
@@ -46,7 +47,38 @@ export default function InsightsDashboard({ systemMetrics, atRiskStudents = [] }
 
     const handleRefresh = () => {
         setIsLoading(true);
-        setTimeout(() => setIsLoading(false), 1500);
+        setTimeout(() => {
+            setIsLoading(false);
+            toast.success("Insights data refreshed");
+        }, 800);
+    };
+
+    const handleExport = () => {
+        try {
+            const dataToExport = {
+                timestamp: new Date().toISOString(),
+                summary: {
+                    students: studentCount,
+                    teachers: teacherCount,
+                    totalRevenue,
+                    atRiskStudents: atRiskStudents.length,
+                },
+                forecasts,
+                anomalies,
+            };
+            const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `insights-report-${new Date().toISOString().slice(0, 10)}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            toast.success("Insights report exported successfully");
+        } catch {
+            toast.error("Failed to export report");
+        }
     };
 
     const forecasts = [
@@ -85,16 +117,22 @@ export default function InsightsDashboard({ systemMetrics, atRiskStudents = [] }
         <div className="space-y-8 animate-in fade-in duration-700">
             <UnifiedPageHeader
                 title="Insights"
-                subtitle="System Intelligence & Analytics"
+                subtitle="Analytics and predictive intelligence"
                 icon={BrainCircuit}
                 color="emerald"
                 actions={
                     <div className="flex gap-2">
-                        <button className="h-10 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-black text-[10px] uppercase tracking-widest px-6 hover:bg-slate-50 dark:hover:bg-slate-900 transition-all bg-white dark:bg-slate-900 flex items-center gap-2">
+                        <button
+                            onClick={handleExport}
+                            className="h-10 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-black text-[10px] uppercase tracking-widest px-6 hover:bg-slate-50 dark:hover:bg-slate-900 transition-all bg-white dark:bg-slate-900 flex items-center gap-2 cursor-pointer"
+                        >
                             <Download className="h-3 w-3" />
                             Export
                         </button>
-                        <button onClick={handleRefresh} className="h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest px-6 shadow-lg transition-all flex items-center gap-2">
+                        <button
+                            onClick={handleRefresh}
+                            className="h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest px-6 shadow-lg transition-all flex items-center gap-2 cursor-pointer"
+                        >
                             {isLoading ? <RefreshCw className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
                             Refresh
                         </button>
