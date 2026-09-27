@@ -1,16 +1,12 @@
+import * as dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
+dotenv.config();
 import { Client } from "pg";
 import * as fs from "fs";
 import * as path from "path";
 
 async function seedAutonomousDemo() {
-  const client = new Client({
-    user: "postgres",
-    password: "Ev?9ZLqUfi@PJM&",
-    host: "db.syppmhoshwxzhjpqzvaz.supabase.co",
-    port: 5432,
-    database: "postgres",
-    ssl: { rejectUnauthorized: false },
-  });
+  const client = new Client({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
 
   try {
     console.log("Connecting to Supabase...");

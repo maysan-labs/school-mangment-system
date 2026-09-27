@@ -1,0 +1,10 @@
+pre-commit:
+  parallel: true
+  commands:
+    type-check:
+      run: npx tsc --noEmit
+    lint:
+      glob: "*.{js,ts,jsx,tsx}"
+      run: npm run lint
+    dead-code:
+      run: npx knip

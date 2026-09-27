@@ -1,17 +1,12 @@
+import * as dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
+dotenv.config();
 import pg from 'pg';
-
-const DB_CONNECTION = "postgresql://postgres:Sam@#2+3#@db.syppmhoshwxzhjpqzvaz.supabase.co:5432/postgres";
+
 
 async function verify() {
     console.log("🔍 Running Deep Audit of Database Seeding...");
-    const client = new pg.Client({
-        user: 'postgres',
-        password: 'Ev?9ZLqUfi@PJM&',
-        host: 'db.syppmhoshwxzhjpqzvaz.supabase.co',
-        port: 5432,
-        database: 'postgres',
-        ssl: { rejectUnauthorized: false }
-    });
+    const client = new pg.Client({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
 
     try {
         await client.connect();

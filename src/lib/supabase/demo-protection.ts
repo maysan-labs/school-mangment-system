@@ -65,7 +65,7 @@ export function wrapWithDemoProtection<T extends object>(client: T): T {
           return new Proxy(queryBuilder, {
             get(qbTarget, qbProp, qbReceiver) {
               if (methodsToWrap.includes(qbProp as string)) {
-                const originalMethod = qbTarget[qbProp as keyof typeof qbTarget] as Function;
+                const originalMethod = qbTarget[qbProp as keyof typeof qbTarget] as (...args: any[]) => any;
                 
                 return function (...args: any[]) {
                   const resultBuilder = originalMethod.apply(qbTarget, args);

@@ -1,9 +1,12 @@
+import * as dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
+dotenv.config();
 
 import { createClient } from '@supabase/supabase-js'
 import pg from 'pg'
 
 const client = new pg.Client({
-  connectionString: "postgresql://postgres:postgres@localhost:54322/postgres"
+  connectionString: process.env.DATABASE_URL
 })
 
 async function main() {

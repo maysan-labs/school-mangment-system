@@ -1,0 +1,25 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "src/app/**/{page,layout,loading,error,not-found,route}.{ts,tsx}",
+    "src/app/actions/**/*.{ts,tsx}",
+    "src/__tests__/**/*.{ts,tsx}"
+  ],
+  "project": [
+    "src/**/*.{js,ts,jsx,tsx}!"
+  ],
+  "ignoreDependencies": [
+    "tailwindcss",
+    "tw-animate-css",
+    "shadcn",
+    "pg",
+    "@types/pg",
+    "cmdk"
+  ],
+  "rules": {
+    "files": "off",
+    "exports": "off",
+    "types": "off",
+    "duplicates": "off"
+  }
+}

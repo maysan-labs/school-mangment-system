@@ -1,0 +1,25 @@
+{
+  "$schema": "https://repomix.com/schemas/repomix-config-schema.json",
+  "output": {
+    "filePath": "repomix-output.xml",
+    "style": "xml",
+    "showLineNumbers": true
+  },
+  "security": {
+    "enableSecurityCheck": true
+  },
+  "ignore": {
+    "customPatterns": [
+      ".next/**",
+      "dist/**",
+      "build/**",
+      "node_modules/**",
+      "public/**",
+      ".git/**",
+      ".env*",
+      "scratch/**",
+      "tmp/**",
+      "*.tsbuildinfo"
+    ]
+  }
+}

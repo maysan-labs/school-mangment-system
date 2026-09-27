@@ -1,15 +1,10 @@
+require("dotenv").config({ path: ".env.local" });
+require("dotenv").config();
 /* eslint-disable @typescript-eslint/no-require-imports */
 const { Client } = require("pg");
 
 async function fixUser() {
-  const client = new Client({
-    user: "postgres",
-    password: "Ev?9ZLqUfi@PJM&",
-    host: "db.syppmhoshwxzhjpqzvaz.supabase.co",
-    port: 5432,
-    database: "postgres",
-    ssl: { rejectUnauthorized: false },
-  });
+  const client = new Client({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
 
   try {
     await client.connect();
