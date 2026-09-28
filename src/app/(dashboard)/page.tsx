@@ -13,7 +13,7 @@ export default async function DashboardPage() {
   const metrics = await getDashboardMetrics();
 
   return (
-    <div className="p-6 space-y-8 animate-in fade-in duration-700">
+    <div className="p-4 sm:p-6 space-y-6 sm:space-y-8 animate-in fade-in duration-700">
       {/* Unified Page Header */}
       <UnifiedPageHeader 
         title="Main Dashboard"
@@ -23,7 +23,7 @@ export default async function DashboardPage() {
       />
 
       {/* Unified Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <DashboardStatCard 
           title="Students" 
           value={metrics.counts.students} 

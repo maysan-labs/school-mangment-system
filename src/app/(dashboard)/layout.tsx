@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getAuthContext } from "@/lib/auth-context";
 import { Sidebar } from "@/components/shared/Sidebar";
+import { MobileSidebar } from "@/components/shared/MobileSidebar";
 import { Navbar } from "@/components/shared/Navbar";
 import { QuickActionsFab } from "@/components/shared/QuickActionsFab";
 import { Suspense } from "react";
@@ -49,6 +50,12 @@ export default async function DashboardLayout({
             userRole={effectiveRole}
           />
         </aside>
+
+        {/* Mobile Navigation Drawer */}
+        <MobileSidebar 
+          initialProfile={effectiveUser} 
+          userRole={effectiveRole}
+        />
         
         {/* Main Content Area with Dynamic Padding Wrapper */}
         <DashboardWrapper>

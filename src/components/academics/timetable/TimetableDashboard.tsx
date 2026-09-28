@@ -534,7 +534,7 @@ export function TimetableDashboard({ timetables, classes, subjects, teachers, cl
     return (
         <div className="space-y-8 animate-in fade-in duration-700 mt-6">
             {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 <DashboardStatCard title="Total Slots" value={totalSlots} icon={Calendar} color="blue" description="All scheduled slots" />
                 <DashboardStatCard title="Teachers" value={teachers.length} icon={Users} color="purple" description="Available staff" />
                 <DashboardStatCard title="Classes" value={classes.length} icon={GraduationCap} color="emerald" description="All classes" />
@@ -594,13 +594,13 @@ export function TimetableDashboard({ timetables, classes, subjects, teachers, cl
 
                     {viewMode === "class" ? (
                         <select value={selectedClass} onChange={(e) => handleClassChange(e.target.value)}
-                            className="h-11 rounded-xl border border-slate-200 dark:border-slate-800 px-4 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 focus:border-blue-300 outline-none min-w-[200px]">
+                            className="h-11 rounded-xl border border-slate-200 dark:border-slate-800 px-4 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 focus:border-blue-300 outline-none w-full sm:w-auto sm:min-w-[200px] flex-1 sm:flex-initial">
                             <option value="" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Select Class...</option>
                             {classes.map((c: any) => (<option key={c.id} value={c.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{c.name}</option>))}
                         </select>
                     ) : (
                         <select value={selectedTeacherId} onChange={(e) => setSelectedTeacher(e.target.value)}
-                            className="h-11 rounded-xl border border-slate-200 dark:border-slate-800 px-4 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 focus:border-blue-300 outline-none min-w-[200px]">
+                            className="h-11 rounded-xl border border-slate-200 dark:border-slate-800 px-4 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 focus:border-blue-300 outline-none w-full sm:w-auto sm:min-w-[200px] flex-1 sm:flex-initial">
                             <option value="" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Select Teacher...</option>
                             {teachers.map((t: any) => (<option key={t.id} value={t.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{t.profile?.full_name}</option>))}
                         </select>
@@ -821,7 +821,7 @@ export function TimetableDashboard({ timetables, classes, subjects, teachers, cl
             </div>
 
             {/* Main Scheduling Grid */}
-            <div className="grid gap-12 lg:grid-cols-4">
+            <div className="grid gap-6 lg:gap-8 lg:grid-cols-4">
                 {/* Day Selector */}
                 <div className="lg:col-span-1 space-y-4">
                     <div className="flex items-center gap-x-3">
@@ -830,12 +830,12 @@ export function TimetableDashboard({ timetables, classes, subjects, teachers, cl
                         </div>
                         <h3 className="text-sm font-semibold text-foreground">Weekdays</h3>
                     </div>
-                    <div className="p-2 space-y-1.5 border border-border/50 bg-card/50 backdrop-blur-sm rounded-2xl">
+                    <div className="p-2 flex lg:flex-col gap-1.5 overflow-x-auto scrollbar-none border border-border/50 bg-card/50 backdrop-blur-sm rounded-2xl">
                         {WEEKDAYS.map((day) => (
                             <button
                                 key={day}
                                 onClick={() => setSelectedDay(day)}
-                                className={`w-full group relative flex items-center justify-between p-3 rounded-xl transition-all duration-200 font-medium text-sm ${
+                                className={`shrink-0 lg:w-full group relative flex items-center justify-between p-3 rounded-xl transition-all duration-200 font-medium text-sm min-w-[100px] lg:min-w-0 ${
                                     selectedDay === day 
                                         ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25" 
                                         : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -850,9 +850,9 @@ export function TimetableDashboard({ timetables, classes, subjects, teachers, cl
                                     )}
                                 </div>
                                 {selectedDay === day ? (
-                                    <CheckCircle2 className="w-4 h-4 relative z-10" />
+                                    <CheckCircle2 className="w-4 h-4 relative z-10 hidden sm:block" />
                                 ) : (
-                                    <div className="w-2 h-2 rounded-full bg-border group-hover:bg-primary transition-colors" />
+                                    <div className="w-2 h-2 rounded-full bg-border group-hover:bg-primary transition-colors hidden sm:block" />
                                 )}
                             </button>
                         ))}
@@ -916,7 +916,7 @@ export function TimetableDashboard({ timetables, classes, subjects, teachers, cl
                                                     </div>
                                                     <div className="flex items-center gap-2.5">
                                                         <div className="h-8 w-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden shrink-0">
-                                                            {s.teacher?.profile?.avatar_url ? (<img src={s.teacher.profile.avatar_url} className="h-full w-full object-cover" />) : (<UserCircle className="w-4 h-4 text-slate-400" />)}
+                                                            {s.teacher?.profile?.avatar_url ? (<img src={s.teacher.profile.avatar_url} alt="" className="h-full w-full object-cover" />) : (<UserCircle className="w-4 h-4 text-slate-400" />)}
                                                         </div>
                                                         <div className="flex-1 min-w-0">
                                                             <p className="text-[11px] font-bold text-slate-700 dark:text-slate-300 truncate">

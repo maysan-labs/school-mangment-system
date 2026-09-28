@@ -24,20 +24,20 @@ export function QuickActionsFab() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40">
       {isOpen && (
-        <div className="absolute bottom-14 right-0 flex flex-col-reverse gap-3 items-end">
+        <div className="absolute bottom-14 right-0 flex flex-col-reverse gap-2.5 sm:gap-3 items-end">
           {quickActions.map((action, index) => (
             <button
               key={index}
               onClick={() => handleAction(action.href)}
-              className="flex items-center gap-3 group"
+              className="flex items-center gap-2 sm:gap-3 group cursor-pointer"
             >
-              <span className="bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 px-3 py-1.5 rounded-lg shadow-md text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+              <span className="bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg shadow-md text-xs sm:text-sm font-medium opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity whitespace-nowrap border border-slate-200/50 dark:border-slate-800">
                 {action.label}
               </span>
-              <div className={`h-12 w-12 rounded-full ${action.color} flex items-center justify-center shadow-lg hover:scale-110 transition-transform`}>
-                <action.icon className="h-5 w-5 text-white" />
+              <div className={`h-10 w-10 sm:h-12 sm:w-12 rounded-full ${action.color} flex items-center justify-center shadow-lg hover:scale-110 transition-transform`}>
+                <action.icon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
               </div>
             </button>
           ))}
@@ -46,12 +46,13 @@ export function QuickActionsFab() {
       
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`h-14 w-14 rounded-full bg-emerald-600 hover:bg-emerald-700 flex items-center justify-center shadow-lg hover:scale-105 transition-all ${isOpen ? "rotate-45" : ""}`}
+        className={`h-12 w-12 sm:h-14 sm:w-14 rounded-full bg-emerald-600 hover:bg-emerald-700 flex items-center justify-center shadow-lg hover:scale-105 transition-all cursor-pointer ${isOpen ? "rotate-45" : ""}`}
+        aria-label="Quick actions"
       >
         {isOpen ? (
-          <X className="h-6 w-6 text-white" />
+          <X className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
         ) : (
-          <Plus className="h-6 w-6 text-white" />
+          <Plus className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
         )}
       </button>
     </div>

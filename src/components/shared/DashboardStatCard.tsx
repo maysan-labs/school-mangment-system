@@ -36,27 +36,27 @@ export function DashboardStatCard({
 
     return (
         <div className={cn(
-            "glass futuristic-card p-5 rounded-2xl border-none shadow-xl flex items-center justify-between group hover:scale-[1.02] transition-all duration-300 cursor-default hover:shadow-2xl",
+            "glass futuristic-card p-4 sm:p-5 rounded-2xl border-none shadow-xl flex items-center justify-between group hover:scale-[1.02] transition-all duration-300 cursor-default hover:shadow-2xl gap-3 min-w-0",
             className
         )}>
-            <div className="flex flex-col gap-1">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{title}</p>
-                <p className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">{value}</p>
+            <div className="flex flex-col gap-0.5 sm:gap-1 min-w-0 flex-1">
+                <p className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5 sm:mb-1 truncate">{title}</p>
+                <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tighter truncate">{value}</p>
                 {trend && (
                     <p className={cn(
-                        "text-[9px] font-black uppercase tracking-widest mt-1",
+                        "text-[8px] sm:text-[9px] font-black uppercase tracking-widest mt-0.5 sm:mt-1 truncate",
                         trend.isUp ? "text-emerald-500" : "text-rose-500"
                     )}>
                         {trend.isUp ? "↑" : "↓"} {trend.value}
                     </p>
                 )}
-                {description && <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">{description}</p>}
+                {description && <p className="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase mt-0.5 sm:mt-1 truncate">{description}</p>}
             </div>
             <div className={cn(
-                "p-3.5 rounded-xl border-2 transition-all group-hover:rotate-6 group-hover:shadow-lg", 
+                "p-2.5 sm:p-3.5 rounded-xl border-2 transition-all group-hover:rotate-6 group-hover:shadow-lg shrink-0", 
                 colors[color]
             )}>
-                <Icon className="h-6 w-6" />
+                <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
         </div>
     );

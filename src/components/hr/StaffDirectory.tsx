@@ -53,7 +53,7 @@ export function StaffDirectory({ initialData, departments, userRole }: { initial
         <div className="space-y-6 animate-in fade-in duration-700">
             {/* Filter Hub */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 flex flex-col md:flex-row items-center gap-4">
-                <div className="relative flex-1 w-full max-w-sm">
+                <div className="relative flex-1 w-full md:max-w-sm">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                     <input 
                         placeholder="Search staff by name or ID..." 
@@ -66,7 +66,7 @@ export function StaffDirectory({ initialData, departments, userRole }: { initial
                     <select 
                         value={typeFilter} 
                         onChange={(e) => { setTypeFilter(e.target.value); setCurrentPage(1); }}
-                        className="h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-800 text-[10px] font-black uppercase tracking-widest bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 outline-none"
+                        className="h-11 flex-1 sm:flex-initial px-4 rounded-xl border border-slate-200 dark:border-slate-800 text-[10px] font-black uppercase tracking-widest bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 outline-none"
                     >
                         <option value="all" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">All Types</option>
                         <option value="teaching" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Teaching</option>
@@ -75,14 +75,14 @@ export function StaffDirectory({ initialData, departments, userRole }: { initial
                     <select 
                         value={deptFilter} 
                         onChange={(e) => { setDeptFilter(e.target.value); setCurrentPage(1); }}
-                        className="h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-800 text-[10px] font-black uppercase tracking-widest bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 outline-none"
+                        className="h-11 flex-1 sm:flex-initial px-4 rounded-xl border border-slate-200 dark:border-slate-800 text-[10px] font-black uppercase tracking-widest bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 outline-none"
                     >
                         <option value="all" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">All Departments</option>
                         {departments.map((d: any) => (
                             <option key={d.id} value={d.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{d.name}</option>
                         ))}
                     </select>
-                    <div className="flex border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+                    <div className="flex border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shrink-0">
                         <button 
                             className={cn(
                                 "h-10 w-10 flex items-center justify-center transition-all",
@@ -106,7 +106,7 @@ export function StaffDirectory({ initialData, departments, userRole }: { initial
             </div>
 
             {/* Stats Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 <DashboardStatCard title="Total Staff" value={initialData.length} icon={Users} color="emerald" description="All personnel" />
                 <DashboardStatCard title="Teaching" value={initialData.filter(s => s.staff_type === 'teaching').length} icon={Briefcase} color="blue" description="Teaching staff" />
                 <DashboardStatCard title="Non-Teaching" value={initialData.filter(s => s.staff_type === 'non_teaching').length} icon={Building2} color="amber" description="Admin staff" />

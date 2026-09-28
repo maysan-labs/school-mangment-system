@@ -54,8 +54,13 @@ export const updateSession = async (request: NextRequest) => {
       return response;
     }
 
-    // Authentication check: redirect to /login if no user and path is not /login
-    if (!user && !request.nextUrl.pathname.startsWith('/login') && !request.nextUrl.pathname.startsWith('/unauthorized')) {
+    // Authentication check: redirect to /login if no user and path is not a public route
+    const isPublicPath = 
+      request.nextUrl.pathname.startsWith('/login') ||
+      request.nextUrl.pathname.startsWith('/unauthorized') ||
+      request.nextUrl.pathname.startsWith('/reset-password');
+
+    if (!user && !isPublicPath) {
       const url = request.nextUrl.clone();
       url.pathname = '/login';
       return NextResponse.redirect(url);

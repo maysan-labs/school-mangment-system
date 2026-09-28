@@ -28,7 +28,7 @@ export function Navbar({ user, userRole }: NavbarProps) {
   const pathname = usePathname();
   const role = userRole || "student";
   const { theme, toggleTheme } = useTheme();
-  const { isCollapsed, width, toggle } = useSidebarStore();
+  const { isCollapsed, width, toggleMobile } = useSidebarStore();
   
   const handleSignOut = async () => {
     const { createClient } = await import("@/lib/supabase/client");
@@ -61,11 +61,21 @@ export function Navbar({ user, userRole }: NavbarProps) {
   });
 
   const [mounted, setMounted] = useState(false);
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
 
   useEffect(() => {
-    requestAnimationFrame(() => setMounted(true));
+    const handle = requestAnimationFrame(() => {
+      setMounted(true);
+      setIsDesktop(window.innerWidth >= 768);
+    });
+    const mql = window.matchMedia("(min-width: 768px)");
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mql.addEventListener("change", handler);
+    return () => {
+      cancelAnimationFrame(handle);
+      mql.removeEventListener("change", handler);
+    };
   }, []);
 
   useEffect(() => {
@@ -76,31 +86,32 @@ export function Navbar({ user, userRole }: NavbarProps) {
     return () => document.removeEventListener("click", closeDropdown);
   }, [showDropdown]);
 
-  const sidebarWidth = mounted ? (isCollapsed ? 80 : width) : 256;
+  const sidebarLeft = !mounted ? 0 : (!isDesktop ? 0 : (isCollapsed ? 80 : width));
 
   return (
     <header 
       className={cn(
-        "h-16 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl flex items-center justify-between px-4 fixed top-0 right-0 z-50 shadow-sm",
+        "h-16 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl flex items-center justify-between px-3 sm:px-4 fixed top-0 right-0 z-40 shadow-sm",
         "transition-all duration-300"
       )}
-      style={{ left: sidebarWidth }}
+      style={{ left: sidebarLeft }}
     >
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4">
         <button
-          className="h-10 w-10 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-black text-[10px] uppercase tracking-widest flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-900 transition-all md:hidden"
-          onClick={() => setShowMobileMenu(!showMobileMenu)}
+          className="h-10 w-10 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-black text-[10px] uppercase tracking-widest flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-900 transition-all md:hidden cursor-pointer"
+          onClick={toggleMobile}
+          aria-label="Toggle navigation menu"
         >
           <Menu className="h-5 w-5" />
         </button>
 
-        <Link href="/" className="flex items-center gap-3 md:hidden">
-          <div className="h-9 w-auto rounded-xl overflow-hidden shadow-lg shadow-emerald-500/20">
+        <Link href="/" className="flex items-center gap-2 md:hidden">
+          <div className="h-8 w-auto rounded-lg overflow-hidden">
             <Image 
               src="/logo-rounded-v2.png" 
               alt="Edu Maysan" 
-              width={120}
-              height={36}
+              width={110}
+              height={32}
               className="object-contain h-full w-auto"
             />
           </div>

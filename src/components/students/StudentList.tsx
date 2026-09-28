@@ -195,8 +195,8 @@ export function StudentList({ initialData, classes, userRole, currentAcademicYea
 
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5">
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-                    <div className="flex flex-1 flex-col lg:flex-row gap-4 w-full">
-                        <div className="relative flex-1 max-w-md">
+                    <div className="flex flex-1 flex-col sm:flex-row flex-wrap lg:flex-nowrap gap-4 w-full">
+                        <div className="relative flex-1 min-w-[200px] w-full lg:max-w-md">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                             <Input
                                 placeholder="Search students..."
@@ -205,9 +205,9 @@ export function StudentList({ initialData, classes, userRole, currentAcademicYea
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
-                        <div className="flex gap-3">
+                        <div className="flex flex-wrap sm:flex-nowrap gap-3 w-full sm:w-auto">
                             <select
-                                className="h-11 w-[160px] rounded-xl border border-slate-200 dark:border-slate-800 px-3 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 focus:border-blue-300 outline-none"
+                                className="h-11 flex-1 sm:flex-initial sm:w-[160px] rounded-xl border border-slate-200 dark:border-slate-800 px-3 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 focus:border-blue-300 outline-none"
                                 value={classFilter}
                                 onChange={(e) => setClassFilter(e.target.value)}
                             >
@@ -217,7 +217,7 @@ export function StudentList({ initialData, classes, userRole, currentAcademicYea
                                 ))}
                             </select>
                             <select
-                                className="h-11 w-[140px] rounded-xl border border-slate-200 dark:border-slate-800 px-3 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 focus:border-blue-300 outline-none"
+                                className="h-11 flex-1 sm:flex-initial sm:w-[140px] rounded-xl border border-slate-200 dark:border-slate-800 px-3 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 focus:border-blue-300 outline-none"
                                 value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value)}
                             >
@@ -407,8 +407,8 @@ export function StudentList({ initialData, classes, userRole, currentAcademicYea
                         </table>
                     </div>
                 ) : (
-                    <div className="p-8">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                    <div className="p-4 sm:p-6 lg:p-8">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
                             {paginatedData.map(student => (
                                 <div 
                                     key={student.id} 
@@ -520,7 +520,7 @@ export function StudentList({ initialData, classes, userRole, currentAcademicYea
             {/* Add/Edit Student Modal */}
             {isOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                    <div className="bg-white dark:bg-slate-900 rounded-xl w-full max-w-xl mx-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                    <div className="bg-white dark:bg-slate-900 rounded-xl w-full max-w-xl mx-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90dvh] overflow-y-auto">
                         <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                             <div>
                                 <h2 className="text-lg font-black tracking-tight text-slate-900 dark:text-white">
@@ -548,7 +548,7 @@ export function StudentList({ initialData, classes, userRole, currentAcademicYea
             {/* Link Parent Modal */}
             {isParentOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                    <div className="bg-white dark:bg-slate-900 rounded-xl w-full max-w-lg mx-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                    <div className="bg-white dark:bg-slate-900 rounded-xl w-full max-w-lg mx-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90dvh] overflow-y-auto">
                         <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                             <div>
                                 <h2 className="text-lg font-black tracking-tight text-slate-900 dark:text-white">Link Guardian</h2>
@@ -575,7 +575,7 @@ export function StudentList({ initialData, classes, userRole, currentAcademicYea
             {/* Bulk Import Modal */}
             {isBulkImportOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                    <div className="bg-white dark:bg-slate-900 rounded-xl w-full max-w-[700px] mx-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                    <div className="bg-white dark:bg-slate-900 rounded-xl w-full max-w-[700px] mx-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90dvh] overflow-y-auto">
                         <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <FileUp className="h-6 w-6 text-emerald-600" />
@@ -601,7 +601,7 @@ export function StudentList({ initialData, classes, userRole, currentAcademicYea
             {/* Bulk Assign Modal */}
             {isBulkAssignOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                    <div className="bg-white dark:bg-slate-900 rounded-xl w-full max-w-[520px] mx-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                    <div className="bg-white dark:bg-slate-900 rounded-xl w-full max-w-[520px] mx-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90dvh] overflow-y-auto">
                         <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                             <div>
                                 <h2 className="text-lg font-black tracking-tight text-slate-900 dark:text-white">Bulk Assignment</h2>

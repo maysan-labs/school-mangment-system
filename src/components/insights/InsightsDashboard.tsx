@@ -140,32 +140,32 @@ export default function InsightsDashboard({ systemMetrics, atRiskStudents = [] }
                 }
             />
 
-            <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl w-fit">
-                <button onClick={() => setActiveTab("overview")} className={cn("px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2", activeTab === "overview" ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500")}>
+            <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl w-full sm:w-fit overflow-x-auto">
+                <button onClick={() => setActiveTab("overview")} className={cn("flex-1 sm:flex-none justify-center px-3 sm:px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 shrink-0 cursor-pointer", activeTab === "overview" ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500")}>
                     <BarChart3 className="w-4 h-4" /> Overview
                 </button>
-                <button onClick={() => setActiveTab("forecasts")} className={cn("px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2", activeTab === "forecasts" ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500")}>
+                <button onClick={() => setActiveTab("forecasts")} className={cn("flex-1 sm:flex-none justify-center px-3 sm:px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 shrink-0 cursor-pointer", activeTab === "forecasts" ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500")}>
                     <BrainCircuit className="w-4 h-4" /> Forecasts
                 </button>
-                <button onClick={() => setActiveTab("alerts")} className={cn("px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2", activeTab === "alerts" ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500")}>
+                <button onClick={() => setActiveTab("alerts")} className={cn("flex-1 sm:flex-none justify-center px-3 sm:px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 shrink-0 cursor-pointer", activeTab === "alerts" ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500")}>
                     <AlertTriangle className="w-4 h-4" /> Alerts
                 </button>
             </div>
 
             {activeTab === "overview" && (
                 <div className="space-y-6 animate-in fade-in duration-700">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         <DashboardStatCard title="Students" value={studentCount} icon={GraduationCap} color="blue" trend={{ value: "+12 this month", isUp: true }} />
                         <DashboardStatCard title="Revenue" value={`₹${(totalRevenue / 100000).toFixed(1)}L`} icon={IndianRupee} color="emerald" trend={{ value: "+8% this month", isUp: true }} />
                         <DashboardStatCard title="Teachers" value={teacherCount} icon={Users} color="purple" description="1:15 ratio" />
-                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5">
+                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 sm:p-5">
                             <div className="flex items-center gap-3 mb-3">
                                 <div className="p-2 rounded-xl bg-rose-50 text-rose-600 border border-rose-100">
                                     <AlertTriangle className="h-4 w-4" />
                                 </div>
                                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">At Risk</span>
                             </div>
-                            <p className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">{atRiskStudents.length}</p>
+                            <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tighter">{atRiskStudents.length}</p>
                             <span className={cn("mt-2 inline-block px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest", atRiskStudents.length > 5 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600")}>
                                 {atRiskStudents.length > 5 ? "High" : "Normal"}
                             </span>
@@ -173,24 +173,24 @@ export default function InsightsDashboard({ systemMetrics, atRiskStudents = [] }
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5">
+                        <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 sm:p-5">
                             <div className="flex items-center justify-between mb-5">
                                 <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 flex items-center gap-2">
                                     <span className="w-1 h-4 bg-emerald-500 rounded-full" />
                                     Class Performance
                                 </h3>
-                                <button className="h-8 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-black text-[9px] uppercase tracking-widest px-4 hover:bg-slate-50 dark:hover:bg-slate-900 transition-all">View All</button>
+                                <button className="h-8 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-black text-[9px] uppercase tracking-widest px-3 sm:px-4 hover:bg-slate-50 dark:hover:bg-slate-900 transition-all cursor-pointer">View All</button>
                             </div>
-                            <div className="h-[200px] flex items-end gap-3">
+                            <div className="h-[200px] flex items-end gap-1.5 sm:gap-3 overflow-x-auto min-w-0">
                                 {["65", "72", "88", "45", "76", "54", "95", "62"].map((h, i) => (
-                                    <div key={i} className="flex-1 flex flex-col items-center gap-2">
+                                    <div key={i} className="flex-1 min-w-[28px] sm:min-w-0 flex flex-col items-center gap-2">
                                         <div className="w-full h-full flex items-end">
                                             <div
                                                 className="w-full bg-gradient-to-t from-emerald-500 to-emerald-400 rounded-t-lg transition-all hover:from-emerald-400"
                                                 style={{ height: `${h}%` }}
                                             />
                                         </div>
-                                        <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase">Class {i + 1}</span>
+                                        <span className="text-[8px] sm:text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase truncate max-w-full text-center">C{i + 1}</span>
                                     </div>
                                 ))}
                             </div>

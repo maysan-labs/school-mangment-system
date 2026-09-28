@@ -252,7 +252,7 @@ export function AttendanceDashboard({
         <button
             onClick={() => setStatus(studentId, status)}
             className={cn(
-                "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-x-2",
+                "px-2.5 sm:px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-x-2",
                 studentRecords[studentId] === status
                     ? `${activeClass} text-white shadow-md`
                     : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-800"
@@ -285,16 +285,16 @@ export function AttendanceDashboard({
                 <DashboardStatCard title="Late" value={weekLate} icon={Clock} color="amber" description="This week" />
             </div>
 
-            <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl w-fit">
+            <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl w-full sm:w-fit overflow-x-auto scrollbar-none">
                 {!isStudent && (
-                    <button onClick={() => setActiveTab("mark")} className={cn("px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2", activeTab === "mark" ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500")}>
+                    <button onClick={() => setActiveTab("mark")} className={cn("px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 shrink-0", activeTab === "mark" ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500")}>
                         <ClipboardCheck className="w-4 h-4" /> Mark
                     </button>
                 )}
-                <button onClick={() => setActiveTab("history")} className={cn("px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2", activeTab === "history" ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500")}>
+                <button onClick={() => setActiveTab("history")} className={cn("px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 shrink-0", activeTab === "history" ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500")}>
                     <Calendar className="w-4 h-4" /> History
                 </button>
-                <button onClick={() => setActiveTab("stats")} className={cn("px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2", activeTab === "stats" ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500")}>
+                <button onClick={() => setActiveTab("stats")} className={cn("px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 shrink-0", activeTab === "stats" ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500")}>
                     <BarChart3 className="w-4 h-4" /> Charts
                 </button>
             </div>
@@ -399,15 +399,15 @@ export function AttendanceDashboard({
                     {studentsLoaded && classStudents.length > 0 && (
                         <div className="space-y-5">
                             <div className="flex flex-wrap items-center justify-between gap-4 p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
-                                <div className="flex items-center gap-3">
-                                    <button onClick={markAllPresent} className="h-10 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-black text-[10px] uppercase tracking-widest px-6 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 transition-all">
+                                <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                                    <button onClick={markAllPresent} className="h-10 flex-1 sm:flex-initial rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-black text-[10px] uppercase tracking-widest px-4 sm:px-6 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 transition-all inline-flex items-center justify-center gap-2">
                                         <Check className="w-4 h-4" /> All Present
                                     </button>
-                                    <button onClick={markAllAbsent} className="h-10 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-black text-[10px] uppercase tracking-widest px-6 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all">
+                                    <button onClick={markAllAbsent} className="h-10 flex-1 sm:flex-initial rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-black text-[10px] uppercase tracking-widest px-4 sm:px-6 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all inline-flex items-center justify-center gap-2">
                                         <X className="w-4 h-4" /> All Absent
                                     </button>
                                 </div>
-                                <div className="flex items-center gap-6 border-l border-slate-200 dark:border-slate-800 pl-6">
+                                <div className="flex items-center gap-6 border-t sm:border-t-0 sm:border-l border-slate-200 dark:border-slate-800 pt-3 sm:pt-0 sm:pl-6 w-full sm:w-auto justify-around sm:justify-start">
                                     <div className="flex flex-col items-center">
                                         <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Present</span>
                                         <span className="text-xl font-black text-slate-900 dark:text-white mt-1 leading-none">{presentCount}</span>

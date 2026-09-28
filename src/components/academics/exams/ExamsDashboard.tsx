@@ -382,11 +382,11 @@ export function ExamsDashboard({
                             />
                         </div>
 
-                        <div className="flex items-center gap-4 w-full md:w-auto">
+                        <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 w-full md:w-auto">
                             <select
                                 value={filterClass}
                                 onChange={(e) => setFilterClass(e.target.value)}
-                                className="w-[180px] h-11 rounded-xl border border-slate-200 px-3 text-sm font-bold text-slate-700 dark:text-slate-300 bg-white/50 dark:bg-slate-950/50 border-slate-200/60 dark:border-slate-800/60 focus:border-blue-300 outline-none"
+                                className="w-full sm:w-[180px] flex-1 sm:flex-initial h-11 rounded-xl border border-slate-200 px-3 text-sm font-bold text-slate-700 dark:text-slate-300 bg-white/50 dark:bg-slate-950/50 border-slate-200/60 dark:border-slate-800/60 focus:border-blue-300 outline-none"
                             >
                                 <option value="all" className="bg-white dark:bg-slate-950 text-slate-900 dark:text-white">All Classes</option>
                                 {classes.map(c => <option key={c.id} value={c.id} className="bg-white dark:bg-slate-950 text-slate-900 dark:text-white">{c.name}</option>)}
@@ -395,7 +395,7 @@ export function ExamsDashboard({
                             <select
                                 value={filterSubject}
                                 onChange={(e) => setFilterSubject(e.target.value)}
-                                className="w-[180px] h-11 rounded-xl border border-slate-200 px-3 text-sm font-bold text-slate-700 dark:text-slate-300 bg-white/50 dark:bg-slate-950/50 border-slate-200/60 dark:border-slate-800/60 focus:border-blue-300 outline-none"
+                                className="w-full sm:w-[180px] flex-1 sm:flex-initial h-11 rounded-xl border border-slate-200 px-3 text-sm font-bold text-slate-700 dark:text-slate-300 bg-white/50 dark:bg-slate-950/50 border-slate-200/60 dark:border-slate-800/60 focus:border-blue-300 outline-none"
                             >
                                 <option value="all" className="bg-white dark:bg-slate-950 text-slate-900 dark:text-white">All Subjects</option>
                                 {subjects.map(s => <option key={s.id} value={s.id} className="bg-white dark:bg-slate-950 text-slate-900 dark:text-white">{s.name}</option>)}
@@ -403,7 +403,7 @@ export function ExamsDashboard({
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
                         {[
                             { label: "Total Exams", value: exams.length, icon: FileText, width: "78%" },
                             { label: "Active Participants", value: students.length, icon: Users, width: "92%" },
@@ -417,7 +417,7 @@ export function ExamsDashboard({
                                 "text-emerald-500 bg-emerald-500/10 border-emerald-500/20 shadow-emerald-500/5",
                             ];
                             return (
-                                <div key={i} className="glass p-6 rounded-2xl border border-slate-200/50 dark:border-slate-800/50 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl shadow-lg flex flex-col justify-between group hover:scale-[1.03] transition-all duration-300 hover:shadow-xl">
+                                <div key={i} className="glass p-5 sm:p-6 rounded-2xl border border-slate-200/50 dark:border-slate-800/50 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl shadow-lg flex flex-col justify-between group hover:scale-[1.03] transition-all duration-300 hover:shadow-xl">
                                     <div>
                                         <div className="flex justify-between items-start mb-4">
                                             <div>
@@ -441,6 +441,7 @@ export function ExamsDashboard({
                     </div>
 
                     <div className="glass border border-slate-200/60 dark:border-slate-800/60 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-[1.5rem] overflow-hidden shadow-xl">
+                        <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead className="bg-slate-50/50 dark:bg-slate-800/30">
                                 <tr>
@@ -530,6 +531,7 @@ export function ExamsDashboard({
                                 ))}
                             </tbody>
                         </table>
+                        </div>
                     </div>
 
                 {viewMode === "calendar" && (
@@ -775,6 +777,7 @@ export function ExamsDashboard({
                         
                         <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
                             <div className="border border-slate-200/60 dark:border-slate-800/60 rounded-xl mb-10 overflow-hidden shadow-sm">
+                                <div className="overflow-x-auto">
                                 <table className="w-full text-left border-collapse">
                                     <thead className="bg-slate-50/50 dark:bg-slate-850">
                                         <tr>
@@ -817,6 +820,7 @@ export function ExamsDashboard({
                                         )}
                                     </tbody>
                                 </table>
+                                </div>
                             </div>
                         </div>
     

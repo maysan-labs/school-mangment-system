@@ -31,22 +31,22 @@ export function UnifiedPageHeader({
 
     return (
         <div className={cn(
-            "flex flex-col md:flex-row justify-between items-start md:items-center gap-6 animate-in slide-in-from-top-4 duration-700",
+            "flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sm:gap-6 animate-in slide-in-from-top-4 duration-700",
             className
         )}>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0 w-full md:w-auto">
                 <div className={cn(
-                    "p-3 rounded-xl border shadow-sm",
+                    "p-2.5 sm:p-3 rounded-xl border shadow-sm shrink-0",
                     iconColors[color]
                 )}>
-                    <Icon className="h-6 w-6" />
+                    <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                <div className="min-w-0 flex-1">
+                    <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2 truncate">
                         {title}
                     </h1>
                     {subtitle && (
-                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mt-1">
+                        <p className="text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-widest mt-0.5 sm:mt-1 truncate">
                             {subtitle}
                         </p>
                     )}
@@ -54,7 +54,7 @@ export function UnifiedPageHeader({
             </div>
 
             {actions && (
-                <div className="flex items-center gap-3 w-full md:w-auto">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full md:w-auto">
                     {actions}
                 </div>
             )}

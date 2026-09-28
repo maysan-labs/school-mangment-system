@@ -35,6 +35,7 @@ import {
   MessageSquare,
   Package,
   UserCircle2,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserService } from "@/lib/services/user";
@@ -180,15 +181,27 @@ const navigation: NavGroup[] = [
   },
 ];
 
-export function Sidebar({ initialProfile, userRole }: { initialProfile: any; userRole: string | null }) {
+export function Sidebar({ 
+  initialProfile, 
+  userRole,
+  isMobile = false,
+  onClose,
+}: { 
+  initialProfile: any; 
+  userRole: string | null;
+  isMobile?: boolean;
+  onClose?: () => void;
+}) {
   const pathname = usePathname();
   const { isCollapsed, toggle: toggleSidebar, width, setWidth } = useSidebarStore();
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   const [profile, setProfile] = useState(initialProfile);
   const [isResizing, setIsResizing] = useState(false);
 
+  const effectiveCollapsed = !isMobile && isCollapsed;
+
   useEffect(() => {
-    if (isResizing) {
+    if (isResizing && !isMobile) {
       const handleMouseMove = (e: MouseEvent) => {
         let newWidth = e.clientX;
         if (newWidth < 200) newWidth = 200;
@@ -212,7 +225,7 @@ export function Sidebar({ initialProfile, userRole }: { initialProfile: any; use
         document.removeEventListener("mouseup", handleMouseUp);
       };
     }
-  }, [isResizing, setWidth]);
+  }, [isResizing, isMobile, setWidth]);
 
   useEffect(() => {
     // Determine which groups should be expanded based on current path
@@ -252,17 +265,23 @@ export function Sidebar({ initialProfile, userRole }: { initialProfile: any; use
     return userRole && group.roles.includes(userRole);
   };
 
+  const handleLinkClick = () => {
+    if (isMobile && onClose) {
+      onClose();
+    }
+  };
+
   return (
     <div 
       className={cn(
         "flex flex-col h-full bg-slate-950 border-r border-slate-800 relative group/sidebar select-none",
         isResizing ? "transition-none border-r-emerald-500/50 shadow-2xl shadow-emerald-500/5" : "transition-all duration-300",
-        isCollapsed ? "w-20" : "w-64"
+        isMobile ? "w-full" : (effectiveCollapsed ? "w-20" : "w-64")
       )}
-      style={{ width: isCollapsed ? 80 : width }}
+      style={isMobile ? undefined : { width: effectiveCollapsed ? 80 : width }}
     >
-      {/* Resize Handle */}
-      {!isCollapsed && (
+      {/* Resize Handle - desktop only */}
+      {!isMobile && !effectiveCollapsed && (
         <div 
           onMouseDown={() => setIsResizing(true)}
           className={cn(
@@ -278,21 +297,22 @@ export function Sidebar({ initialProfile, userRole }: { initialProfile: any; use
           </div>
         </div>
       )}
-      {/* Brand Logo */}
-      <div className="p-5 pb-2 flex items-center gap-3 min-h-[48px]">
-        {isCollapsed ? (
-          <div className="h-10 w-10 rounded-xl overflow-hidden shrink-0 shadow-lg shadow-emerald-500/20 bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
-            <Image 
-              src="/icon-rounded-v2.png" 
-              alt="Edu Maysan" 
-              width={40}
-              height={40}
-              className="object-contain"
-              priority
-            />
-          </div>
-        ) : (
-          <>
+
+      {/* Brand Logo & Close button for mobile */}
+      <div className="p-4 sm:p-5 pb-2 flex items-center justify-between min-h-[48px]">
+        <div className="flex items-center gap-3">
+          {effectiveCollapsed ? (
+            <div className="h-10 w-10 rounded-xl overflow-hidden shrink-0 shadow-lg shadow-emerald-500/20 bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
+              <Image 
+                src="/icon-rounded-v2.png" 
+                alt="Edu Maysan" 
+                width={40}
+                height={40}
+                className="object-contain"
+                priority
+              />
+            </div>
+          ) : (
             <div className="h-10 w-auto rounded-xl overflow-hidden shrink-0 flex items-center">
               <Image 
                 src="/logo-rounded-v2.png" 
@@ -303,29 +323,42 @@ export function Sidebar({ initialProfile, userRole }: { initialProfile: any; use
                 priority
               />
             </div>
-          </>
-        )}
-        {!isCollapsed && (
-          <div className="animate-in fade-in slide-in-from-left-2 duration-500">
-            <p className="text-[10px] text-emerald-400/70 font-medium tracking-wider uppercase">Edu Maysan</p>
-          </div>
+          )}
+          {!effectiveCollapsed && (
+            <div className="animate-in fade-in slide-in-from-left-2 duration-500">
+              <p className="text-[10px] text-emerald-400/70 font-medium tracking-wider uppercase">Edu Maysan</p>
+            </div>
+          )}
+        </div>
+
+        {isMobile && (
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/80 transition-colors cursor-pointer"
+            aria-label="Close menu"
+          >
+            <X className="h-5 w-5" />
+          </button>
         )}
       </div>
 
-      {/* Collapse Toggle */}
-      <button 
-        onClick={toggleSidebar}
-        className="absolute -right-3 top-20 bg-slate-800 text-slate-400 p-1 rounded-full border border-slate-700 hover:text-white transition-colors z-50 cursor-pointer"
-      >
-        {isCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-      </button>
+      {/* Collapse Toggle - desktop only */}
+      {!isMobile && (
+        <button 
+          onClick={toggleSidebar}
+          className="absolute -right-3 top-20 bg-slate-800 text-slate-400 p-1 rounded-full border border-slate-700 hover:text-white transition-colors z-50 cursor-pointer"
+          aria-label={effectiveCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {effectiveCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+        </button>
+      )}
 
       {/* Navigation Links */}
       <ScrollArea className="flex-1 px-4 py-6" hideScrollbar>
         <div className="space-y-8">
           {navigation.filter(canSeeGroup).map((group) => (
             <div key={group.group} className="space-y-2">
-              {!isCollapsed && (
+              {!effectiveCollapsed && (
                 <h2 className="px-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4 animate-in fade-in duration-700">
                   {group.group}
                 </h2>
@@ -339,12 +372,13 @@ export function Sidebar({ initialProfile, userRole }: { initialProfile: any; use
 
                   return (
                     <div key={item.name} className="space-y-1">
-                      {isCollapsed ? (
+                      {effectiveCollapsed ? (
                         <TooltipProvider delayDuration={0}>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Link 
                                 href={item.href}
+                                onClick={handleLinkClick}
                                 className={cn(
                                   "flex items-center justify-center h-12 w-12 mx-auto rounded-xl transition-all duration-200",
                                   active 
@@ -377,6 +411,7 @@ export function Sidebar({ initialProfile, userRole }: { initialProfile: any; use
                           ) : (
                             <Link 
                               href={item.href}
+                              onClick={handleLinkClick}
                               className={cn(
                                 "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group relative",
                                 active ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "text-slate-400 hover:text-slate-100 hover:bg-slate-900/50"
@@ -389,7 +424,7 @@ export function Sidebar({ initialProfile, userRole }: { initialProfile: any; use
                           )}
 
                           {/* Sub Items */}
-                          {!isCollapsed && hasSubItems && isExpanded && (
+                          {!effectiveCollapsed && hasSubItems && isExpanded && (
                             <div className="ml-9 mt-1 space-y-1 animate-in slide-in-from-top-2 duration-300">
                               {item.subItems?.map((sub) => {
                                 const subActive = pathname === sub.href;
@@ -397,6 +432,7 @@ export function Sidebar({ initialProfile, userRole }: { initialProfile: any; use
                                   <Link
                                     key={sub.name}
                                     href={sub.href}
+                                    onClick={handleLinkClick}
                                     className={cn(
                                       "block px-3 py-2 text-xs font-bold transition-all rounded-lg relative",
                                       subActive 
@@ -423,7 +459,7 @@ export function Sidebar({ initialProfile, userRole }: { initialProfile: any; use
       </ScrollArea>
 
       {/* User Profile Mini */}
-      {!isCollapsed && (
+      {!effectiveCollapsed && (
         <div className="p-4 mt-auto border-t border-slate-900 bg-slate-950/50 backdrop-blur-xl animate-in slide-in-from-bottom-4 duration-1000">
           <div className="flex items-center gap-3 p-2 rounded-2xl bg-slate-900/50 border border-slate-800">
             <div className="h-10 w-10 rounded-xl bg-emerald-500 flex items-center justify-center font-black text-white text-xs shadow-lg shadow-emerald-500/10">

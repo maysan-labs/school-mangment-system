@@ -19,10 +19,12 @@ import {
   Database,
   Search,
   Zap,
-  KeyRound
+  KeyRound,
+  LogOut
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -117,6 +119,7 @@ export default function LoginPage() {
   const [activeTab, setActiveTab] = useState<"accounts" | "manual">("accounts");
 
   // Auth flow states
+  const [existingUser, setExistingUser] = useState<{ email?: string; name?: string; role?: string } | null>(null);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [resetSent, setResetSent] = useState(false);
@@ -133,9 +136,27 @@ export default function LoginPage() {
     },
   });
 
-  // Fetch initial counts of database accounts
+  // Fetch initial counts of database accounts and check existing session
   useEffect(() => {
     getDatabaseAccountCounts().then(counts => setRoleCounts(counts)).catch(() => {});
+
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user && user.email) {
+        supabase
+          .from("profiles")
+          .select("full_name, role")
+          .eq("id", user.id)
+          .maybeSingle()
+          .then(({ data }) => {
+            setExistingUser({
+              email: user.email,
+              name: data?.full_name || user.user_metadata?.full_name || user.email?.split("@")[0],
+              role: data?.role || "user",
+            });
+          });
+      }
+    }).catch(() => {});
   }, []);
 
   // When a role is selected, load the actual registered accounts from the database
@@ -163,6 +184,23 @@ export default function LoginPage() {
     }
   };
 
+  const handleSignOutExisting = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    setExistingUser(null);
+    toast.info("Signed out of active session");
+  };
+
+  const handleFillDemoCredentials = () => {
+    if (!selectedRole) return;
+    const creds = DEMO_CREDENTIALS[selectedRole];
+    if (creds) {
+      form.setValue("email", creds.email);
+      form.setValue("password", creds.password);
+      toast.info(`Filled credentials for ${creds.name}`);
+    }
+  };
+
   // Instant login using an actual database account
   const handleDirectDbAccountLogin = async (account: DatabaseAccount) => {
     setAccountLoggingIn(account.email);
@@ -174,7 +212,9 @@ export default function LoginPage() {
         // Fallback: autofill the form so the user can enter their password
         form.setValue("email", account.email);
         setActiveTab("manual");
-        setError(tokenErr || "Could not generate direct token. Please enter password.");
+        const msg = tokenErr || "Could not generate direct token. Please enter password.";
+        setError(msg);
+        toast.error(msg);
         return;
       }
 
@@ -188,11 +228,15 @@ export default function LoginPage() {
         form.setValue("email", account.email);
         setActiveTab("manual");
         setError(verifyErr.message);
+        toast.error(verifyErr.message);
       } else {
-        router.push("/portal");
+        toast.success(`Welcome back, ${account.full_name || account.email}!`);
+        window.location.replace("/portal");
       }
     } catch (err: any) {
-      setError(err?.message || "Authentication error occurred.");
+      const msg = err?.message || "Authentication error occurred.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setAccountLoggingIn(null);
     }
@@ -214,12 +258,17 @@ export default function LoginPage() {
       });
 
       if (signInErr) {
-        setError(`Demo sign-in failed: ${signInErr.message}`);
+        const msg = `Demo sign-in failed: ${signInErr.message}`;
+        setError(msg);
+        toast.error(msg);
       } else {
-        router.push("/portal");
+        toast.success(`Welcome, ${creds.name}! Launching portal...`);
+        window.location.replace("/portal");
       }
     } catch (e: any) {
-      setError(e?.message || "An unexpected error occurred during demo login.");
+      const msg = e?.message || "An unexpected error occurred during demo login.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setDemoLoggingIn(null);
     }
@@ -240,11 +289,15 @@ export default function LoginPage() {
 
       if (signInErr) {
         setError(signInErr.message);
+        toast.error(signInErr.message);
       } else {
-        router.push("/portal");
+        toast.success("Signed in successfully!");
+        window.location.replace("/portal");
       }
     } catch (e: any) {
-      setError(e?.message || "An unexpected error occurred.");
+      const msg = e?.message || "An unexpected error occurred.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -267,11 +320,15 @@ export default function LoginPage() {
       });
       if (resetErr) {
         setError(resetErr.message);
+        toast.error(resetErr.message);
       } else {
         setResetSent(true);
+        toast.success("Password reset instructions dispatched");
       }
     } catch (err: any) {
-      setError(err?.message || "Failed to send reset instructions.");
+      const msg = err?.message || "Failed to send reset instructions.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -289,7 +346,7 @@ export default function LoginPage() {
   const currentRoleConfig = roleOptions.find((r) => r.id === selectedRole);
 
   return (
-    <div className="h-screen max-h-screen flex flex-col md:flex-row bg-slate-50 text-slate-900 dark:bg-[#03050d] dark:text-white transition-colors duration-350 font-sans relative overflow-hidden">
+    <div className="min-h-[100dvh] flex flex-col md:flex-row bg-slate-50 text-slate-900 dark:bg-[#03050d] dark:text-white transition-colors duration-350 font-sans relative md:h-screen md:max-h-screen md:overflow-hidden overflow-y-auto">
       
       {/* Theme Toggle Button */}
       <button
@@ -369,7 +426,7 @@ export default function LoginPage() {
       </div>
 
       {/* Right Panel: Dual Option Interface */}
-      <div className="flex-1 flex flex-col justify-center items-center p-4 lg:p-8 relative overflow-y-auto max-h-full scrollbar-hide">
+      <div className="flex-1 flex flex-col justify-center items-center p-3 sm:p-6 lg:p-8 relative overflow-y-auto w-full max-w-full">
         
         {/* Glow Spheres for light mode and mobile */}
         <div className="absolute top-1/4 right-1/4 w-[350px] h-[350px] bg-emerald-500/5 dark:bg-emerald-500/[0.015] rounded-full blur-[110px] pointer-events-none z-0 animate-float-2" />
@@ -409,101 +466,149 @@ export default function LoginPage() {
               )}
             >
               
-              {/* SLIDE 1: Two Options (Select Account Type & Quick Demo) */}
+              {/* SLIDE 1: Workspace Authentication & Quick Demo */}
               <div className="w-1/2 flex flex-col shrink-0">
                 <CardHeader className="pb-3 border-b border-slate-200/80 dark:border-white/[0.06] text-center pt-4 bg-slate-50/20 dark:bg-white/[0.01]">
                   <div className="flex items-center justify-center gap-1.5">
                     <Database className="h-3.5 w-3.5 text-emerald-500" />
                     <CardTitle className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">
-                      Option 1: Select Account Type
+                      Workspace Authentication
                     </CardTitle>
                   </div>
-                  <p className="text-[10px] text-slate-500 dark:text-white/40">Access actual accounts residing in your database</p>
+                  <p className="text-[10px] text-slate-500 dark:text-white/40">Select an account type or jump in with 1-click demo</p>
                 </CardHeader>
                 
-                <CardContent className="pt-3 pb-4 space-y-3 px-5">
-                  {/* Account Type List */}
-                  <div className="space-y-2">
-                    {roleOptions.map((role) => {
-                      const count = roleCounts[role.id];
-                      return (
-                        <button
-                          key={role.id}
-                          onClick={() => handleSelectRole(role.id)}
-                          className={cn(
-                            "w-full flex items-center gap-3 p-2.5 rounded-xl border border-slate-200/80 dark:border-white/[0.05] bg-white/55 dark:bg-white/[0.01] hover:shadow-[0_0_15px_rgba(16,185,129,0.04)] transition-all duration-300 text-left group cursor-pointer",
-                            role.hoverAccent
-                          )}
-                        >
-                          <div className={cn(
-                            "p-2 rounded-lg border flex items-center justify-center transition-colors duration-300",
-                            role.accent
-                          )}>
-                            <role.icon className="h-4 w-4" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors text-xs">
-                                {role.label}
-                              </p>
-                              {count !== undefined && count > 0 && (
-                                <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                                  {count} in DB
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-[10px] text-slate-500 dark:text-white/40 font-medium truncate mt-0.5 leading-none">
-                              {role.description}
-                            </p>
-                          </div>
-                          <ArrowRight className="h-3.5 w-3.5 text-slate-400 dark:text-white/20 group-hover:translate-x-1 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-all duration-300 shrink-0" />
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Option 2: Quick Demo Access Panel */}
-                  {SHOW_DEMO_LOGINS && (
-                    <div className="pt-3 border-t border-slate-200/80 dark:border-white/[0.06] space-y-2">
-                      <div className="text-center">
-                        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-black uppercase tracking-wider">
-                          <Sparkles className="h-3 w-3 animate-pulse" /> Option 2: Quick Demo
-                        </div>
-                        <p className="text-[9px] text-slate-400 dark:text-white/40 mt-0.5">
-                          Instant 1-click login with pre-configured demo roles
+                <CardContent className="pt-3 pb-4 space-y-3 px-3.5 sm:px-5">
+                  {/* Active session banner if any */}
+                  {existingUser && (
+                    <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 truncate">
+                          Active: {existingUser.name}
+                        </p>
+                        <p className="text-[9px] text-emerald-600 dark:text-emerald-400 font-mono truncate">
+                          {existingUser.email} ({existingUser.role})
                         </p>
                       </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Button
+                          size="sm"
+                          onClick={() => { window.location.href = "/portal"; }}
+                          className="h-7 px-2.5 text-[10px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg cursor-pointer"
+                        >
+                          Open Portal →
+                        </Button>
+                        <button
+                          type="button"
+                          onClick={handleSignOutExisting}
+                          className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-white underline cursor-pointer p-1"
+                        >
+                          Sign Out
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
-                      <div className="grid grid-cols-2 gap-2">
+                  {/* Visible error message if any */}
+                  {error && (
+                    <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-medium leading-tight">
+                      {error}
+                    </div>
+                  )}
+
+                  {/* Section 1: Quick 1-Click Demo Login */}
+                  {SHOW_DEMO_LOGINS && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-black uppercase tracking-wider">
+                          <Sparkles className="h-3 w-3 animate-pulse" /> 1-Click Quick Demo
+                        </div>
+                        <span className="text-[9px] font-semibold text-slate-400 dark:text-white/40">Verified accounts</span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {roleOptions.map((role) => {
                           const isLoggingIn = demoLoggingIn === role.id;
+                          const creds = DEMO_CREDENTIALS[role.id];
                           return (
                             <button
                               key={`demo-${role.id}`}
                               onClick={() => handleDemoLogin(role.id)}
                               disabled={demoLoggingIn !== null || loading}
-                              className="flex items-center justify-center gap-2 py-2 px-2.5 rounded-xl border border-slate-200/60 dark:border-white/[0.06] bg-slate-50/80 dark:bg-white/[0.015] hover:bg-slate-100 dark:hover:bg-white/[0.04] hover:border-emerald-500/30 transition-all duration-300 text-left group disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+                              className="p-2 rounded-xl border border-slate-200/70 dark:border-white/[0.06] bg-slate-50/70 dark:bg-white/[0.015] hover:bg-white dark:hover:bg-white/[0.04] hover:border-emerald-500/40 hover:shadow-sm transition-all duration-200 text-left group disabled:opacity-50 cursor-pointer"
                             >
-                              {isLoggingIn ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-500" />
-                              ) : (
-                                <role.icon className={cn(
-                                  "h-3.5 w-3.5 shrink-0 transition-transform duration-300 group-hover:scale-110",
-                                  role.id === "admin" ? "text-emerald-600 dark:text-emerald-400" :
-                                  role.id === "teacher" ? "text-blue-600 dark:text-blue-400" :
-                                  role.id === "student" ? "text-violet-600 dark:text-violet-400" :
-                                  "text-amber-600 dark:text-amber-400"
-                                )} />
-                              )}
-                              <span className="text-[11px] font-bold text-slate-700 dark:text-white/80 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                                Demo {role.label}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <div className={cn(
+                                  "p-1.5 rounded-lg shrink-0",
+                                  role.accent
+                                )}>
+                                  {isLoggingIn ? (
+                                    <Loader2 className="h-3 w-3 animate-spin text-emerald-500" />
+                                  ) : (
+                                    <role.icon className="h-3 w-3" />
+                                  )}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center justify-between">
+                                    <p className="text-[11px] font-bold text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                                      {role.label}
+                                    </p>
+                                    <span className="text-[8px] font-black uppercase px-1 py-0.2 rounded bg-slate-200/60 dark:bg-white/10 text-slate-600 dark:text-slate-300">
+                                      Demo
+                                    </span>
+                                  </div>
+                                  <p className="text-[9px] text-slate-400 dark:text-white/40 truncate font-mono">
+                                    {creds?.email.split('@')[0]}
+                                  </p>
+                                </div>
+                              </div>
                             </button>
                           );
                         })}
                       </div>
                     </div>
                   )}
+
+                  {/* Section 2: Account Types & Database Explorer */}
+                  <div className="pt-2 border-t border-slate-200/80 dark:border-white/[0.06] space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/50">
+                        Explore Database Accounts
+                      </p>
+                      <span className="text-[9px] text-slate-400 dark:text-white/40">Click to browse</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2">
+                      {roleOptions.map((role) => {
+                        const count = roleCounts[role.id];
+                        return (
+                          <button
+                            key={role.id}
+                            onClick={() => handleSelectRole(role.id)}
+                            className={cn(
+                              "flex items-center gap-2 p-2 rounded-xl border border-slate-200/80 dark:border-white/[0.05] bg-white/55 dark:bg-white/[0.01] hover:border-emerald-500/30 transition-all text-left group cursor-pointer",
+                              role.hoverAccent
+                            )}
+                          >
+                            <div className={cn("p-1.5 rounded-lg border", role.accent)}>
+                              <role.icon className="h-3 w-3" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors text-[11px] truncate">
+                                {role.label}
+                              </p>
+                              {count !== undefined && count > 0 && (
+                                <p className="text-[8px] font-semibold text-emerald-600 dark:text-emerald-400">
+                                  {count} registered
+                                </p>
+                              )}
+                            </div>
+                            <ArrowRight className="h-3 w-3 text-slate-400 group-hover:translate-x-0.5 group-hover:text-emerald-500 transition-all shrink-0" />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
 
                   <div className="pt-1 text-center">
                     <Link href="/" className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline transition-colors uppercase tracking-widest">
@@ -545,7 +650,7 @@ export default function LoginPage() {
                   </div>
                 </CardHeader>
                 
-                <CardContent className="pt-3 pb-5 px-5 flex-1 flex flex-col overflow-hidden">
+                <CardContent className="pt-3 pb-5 px-3.5 sm:px-5 flex-1 flex flex-col overflow-hidden">
                   {isForgotPassword ? (
                     <div className="space-y-4">
                       {resetSent ? (
@@ -605,6 +710,39 @@ export default function LoginPage() {
                     </div>
                   ) : (
                     <div className="space-y-3 flex-1 flex flex-col">
+                      {/* Role-Specific Quick Demo Banner */}
+                      {selectedRole && DEMO_CREDENTIALS[selectedRole] && (
+                        <div className="p-2.5 rounded-xl border border-amber-500/25 bg-amber-500/[0.04] dark:bg-amber-500/[0.02] flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <Sparkles className="h-3 w-3 text-amber-500 shrink-0" />
+                              <span className="text-[11px] font-bold text-slate-800 dark:text-white truncate">
+                                {DEMO_CREDENTIALS[selectedRole].name}
+                              </span>
+                              <span className="text-[8px] font-black uppercase px-1 py-0.2 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                                1-Click Demo
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-slate-500 dark:text-white/40 truncate font-mono mt-0.5">
+                              {DEMO_CREDENTIALS[selectedRole].email}
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            type="button"
+                            onClick={() => handleDemoLogin(selectedRole)}
+                            disabled={demoLoggingIn !== null}
+                            className="h-7 px-3 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-[10px] uppercase tracking-wider cursor-pointer shrink-0 shadow-sm"
+                          >
+                            {demoLoggingIn === selectedRole ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              "Instant Login"
+                            )}
+                          </Button>
+                        </div>
+                      )}
+
                       {/* Sub-Tabs: Actual Accounts vs Direct Password */}
                       <div className="flex rounded-xl bg-slate-100 dark:bg-white/[0.03] p-1 border border-slate-200/80 dark:border-white/[0.06]">
                         <button
@@ -656,7 +794,7 @@ export default function LoginPage() {
                           </div>
 
                           {/* Accounts Scrollable Container */}
-                          <div className="flex-1 overflow-y-auto max-h-[220px] space-y-1.5 pr-1 scrollbar-thin">
+                          <div className="flex-1 overflow-y-auto max-h-[260px] sm:max-h-[300px] space-y-1.5 pr-1 scrollbar-thin">
                             {loadingAccounts ? (
                               <div className="py-8 flex flex-col items-center justify-center gap-2 text-slate-400 text-xs">
                                 <Loader2 className="h-5 w-5 animate-spin text-emerald-500" />
@@ -790,6 +928,16 @@ export default function LoginPage() {
                                 </FormItem>
                               )}
                             />
+                            {selectedRole && DEMO_CREDENTIALS[selectedRole] && (
+                              <button
+                                type="button"
+                                onClick={handleFillDemoCredentials}
+                                className="w-full py-1.5 px-2 rounded-lg border border-dashed border-amber-500/35 bg-amber-500/[0.04] text-amber-600 dark:text-amber-400 hover:bg-amber-500/[0.08] transition-colors text-[10px] font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                              >
+                                <Sparkles className="h-3 w-3" /> Fill Demo ({DEMO_CREDENTIALS[selectedRole].email})
+                              </button>
+                            )}
+
                             <Button 
                               type="submit" 
                               className="w-full h-9 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/40 hover:scale-[1.01] cursor-pointer" 

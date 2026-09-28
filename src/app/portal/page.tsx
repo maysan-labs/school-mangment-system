@@ -62,28 +62,56 @@ export default function PortalPage() {
 
   useEffect(() => {
     let cancelled = false;
+    const supabase = createClient();
+
     const fetchProfile = async () => {
       try {
-        const supabase = createClient();
         const profile = await UserService.getCurrentProfile(supabase);
         if (cancelled) return;
-        if (profile && !("error" in profile)) setUserProfile(profile);
-        else router.push("/login");
+        if (profile && !("error" in profile)) {
+          setUserProfile(profile);
+          setIsLoading(false);
+          return;
+        }
+
+        // Retry once after 600ms if session cookie is propagating
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        if (cancelled) return;
+        const retryProfile = await UserService.getCurrentProfile(supabase);
+        if (cancelled) return;
+
+        if (retryProfile && !("error" in retryProfile)) {
+          setUserProfile(retryProfile);
+        } else {
+          router.push("/login");
+        }
       } catch {
         if (!cancelled) router.push("/login");
       } finally {
         if (!cancelled) setIsLoading(false);
       }
     };
+
     fetchProfile();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT") {
+        window.location.href = "/login";
+      }
+    });
+
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => { cancelled = true; clearInterval(timer); };
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+      clearInterval(timer);
+    };
   }, [router]);
 
   const handleSignOut = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
-    router.push("/login");
+    window.location.href = "/login";
   };
 
   const getGreeting = () => {
@@ -114,7 +142,7 @@ export default function PortalPage() {
       </div>
 
       {/* Header */}
-      <header className="relative z-50 flex items-center justify-between px-6 lg:px-12 py-4 animate-in fade-in slide-in-from-top-4 duration-700">
+      <header className="relative z-50 flex items-center justify-between px-4 sm:px-6 lg:px-12 py-4 animate-in fade-in slide-in-from-top-4 duration-700">
         <Image src="/logo-rounded-v2.png" alt="Edu Maysan" width={140} height={40} className="object-contain h-8 w-auto" priority />
 
         <div className="flex items-center gap-3">
@@ -126,7 +154,7 @@ export default function PortalPage() {
 
           <button
             onClick={toggleTheme}
-            className="h-9 w-9 rounded-xl border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white flex items-center justify-center hover:bg-slate-200/50 dark:hover:bg-white/5 transition-all shadow-sm dark:shadow-none"
+            className="h-9 w-9 rounded-xl border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white flex items-center justify-center hover:bg-slate-200/50 dark:hover:bg-white/5 transition-all shadow-sm dark:shadow-none cursor-pointer"
             title="Toggle Theme"
           >
             {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
@@ -134,7 +162,7 @@ export default function PortalPage() {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-2 p-1 rounded-xl hover:bg-slate-200/50 dark:hover:bg-white/5 transition-colors">
+              <button className="flex items-center gap-2 p-1 rounded-xl hover:bg-slate-200/50 dark:hover:bg-white/5 transition-colors cursor-pointer">
                 <div className="relative">
                   {userProfile?.avatar_url ? (
                     <Avatar className="h-9 w-9 rounded-xl ring-2 ring-emerald-500/20">
@@ -175,17 +203,17 @@ export default function PortalPage() {
       </header>
 
       {/* Main */}
-      <main className="relative z-10 max-w-7xl mx-auto px-6 lg:px-12 pb-36">
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 pb-36">
         {/* Hero + Search row */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pt-8 pb-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pt-6 sm:pt-8 pb-8 sm:pb-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
           <div className="flex-1">
-            <h1 className="text-4xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white leading-[1.1]">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white leading-[1.1]">
               {getGreeting()},{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-400 dark:from-emerald-400 dark:via-teal-300 dark:to-emerald-200">
                 {userProfile?.full_name?.split(" ")[0] || "User"}
               </span>
             </h1>
-            <p className="text-sm text-slate-500 dark:text-white/50 mt-2 max-w-lg">
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-white/50 mt-2 max-w-lg">
               Your role: <span className="text-emerald-600 dark:text-emerald-400 font-bold uppercase text-[10px] tracking-widest">{userRole}</span>
               {roleHref[userRole] && (
                 <Link href={roleHref[userRole]} className="inline-flex items-center gap-1 ml-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-emerald-600 dark:text-white/30 dark:hover:text-emerald-400 transition-colors">
@@ -208,14 +236,14 @@ export default function PortalPage() {
         </div>
 
         {/* Quick Access */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-8 sm:mb-12">
           {quickLinks.map((link, i) => {
             const Icon = link.icon;
             return (
               <Link
                 key={link.label}
                 href={link.href}
-                className="group flex items-center gap-3 p-4 rounded-2xl bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/[0.06] hover:border-emerald-500/30 dark:hover:border-emerald-500/30 transition-all duration-300 shadow-sm dark:shadow-none animate-in fade-in slide-in-from-bottom-4 fill-mode-both"
+                className="group flex items-center gap-3 p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/[0.06] hover:border-emerald-500/30 dark:hover:border-emerald-500/30 transition-all duration-300 shadow-sm dark:shadow-none animate-in fade-in slide-in-from-bottom-4 fill-mode-both"
                 style={{ animationDelay: `${200 + i * 60}ms` }}
               >
                 <div className={cn("p-2.5 rounded-xl shrink-0", link.color)}>
@@ -230,7 +258,7 @@ export default function PortalPage() {
         {/* Launchpad Modules */}
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
           <Suspense fallback={
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {[...Array(8)].map((_, i) => <div key={i} className="animate-pulse h-32 rounded-2xl bg-white/5" />)}
             </div>
           }>
@@ -241,9 +269,9 @@ export default function PortalPage() {
 
       {/* Footer */}
       <footer className="relative z-50">
-        <div className="max-w-7xl mx-auto px-6 lg:px-12 pb-6">
-          <div className="bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-6 py-4 shadow-sm dark:shadow-none">
-            <div className="flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 pb-6">
+          <div className="bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl px-4 sm:px-6 py-4 shadow-sm dark:shadow-none">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
               <div className="flex items-center gap-3">
                 <Image src="/logo-rounded-v2.png" alt="Edu Maysan" width={80} height={24} className="object-contain h-4 w-auto opacity-40 dark:opacity-40" />
                 <div className="h-3 w-px bg-slate-200 dark:bg-white/10" />

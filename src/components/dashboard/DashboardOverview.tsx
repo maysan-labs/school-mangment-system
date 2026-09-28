@@ -53,20 +53,20 @@ export function DashboardOverview({ initialData }: { initialData?: any }) {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-1000">
       <Tabs defaultValue="ops" className="w-full">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-          <TabsList className="bg-muted/80 backdrop-blur-sm p-1 h-auto border border-border/50 rounded-xl">
-            <TabsTrigger value="ops" className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg px-4 py-2 gap-2 text-xs font-semibold">
+          <TabsList className="bg-muted/80 backdrop-blur-sm p-1 h-auto border border-border/50 rounded-xl w-full sm:w-auto grid grid-cols-4 sm:flex">
+            <TabsTrigger value="ops" className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg px-2 sm:px-4 py-2 gap-1.5 sm:gap-2 text-[11px] sm:text-xs font-semibold justify-center">
               <LayoutDashboard className="w-4 h-4" />
               <span className="hidden sm:inline">Overview</span>
             </TabsTrigger>
-            <TabsTrigger value="academic" className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg px-4 py-2 gap-2 text-xs font-semibold">
+            <TabsTrigger value="academic" className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg px-2 sm:px-4 py-2 gap-1.5 sm:gap-2 text-[11px] sm:text-xs font-semibold justify-center">
               <GraduationCap className="w-4 h-4" />
               <span className="hidden sm:inline">Academic</span>
             </TabsTrigger>
-            <TabsTrigger value="financial" className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg px-4 py-2 gap-2 text-xs font-semibold">
+            <TabsTrigger value="financial" className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg px-2 sm:px-4 py-2 gap-1.5 sm:gap-2 text-[11px] sm:text-xs font-semibold justify-center">
               <IndianRupee className="w-4 h-4" />
               <span className="hidden sm:inline">Finance</span>
             </TabsTrigger>
-            <TabsTrigger value="insights" className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg px-4 py-2 gap-2 text-xs font-semibold">
+            <TabsTrigger value="insights" className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg px-2 sm:px-4 py-2 gap-1.5 sm:gap-2 text-[11px] sm:text-xs font-semibold justify-center">
               <BrainCircuit className="w-4 h-4" />
               <span className="hidden sm:inline">Reports</span>
             </TabsTrigger>
