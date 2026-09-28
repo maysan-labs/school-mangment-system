@@ -29,7 +29,7 @@ const DOC_TYPE_LABELS: Record<DocType, string> = {
   mother_photo: "Mother Photo",
 };
 
-export function getDocTypeLabel(docType: string): string {
+function getDocTypeLabel(docType: string): string {
   return DOC_TYPE_LABELS[docType as DocType] || docType;
 }
 

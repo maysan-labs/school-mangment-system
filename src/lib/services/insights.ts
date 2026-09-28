@@ -1,204 +1,230 @@
+"use server";
+
 import { createAdminClient } from "@/lib/supabase/admin";
-import { handleServiceError } from "../error-handler";
 
-/**
- * Insights Service
- * Provides predictive analytics for student performance and institutional health using real system telemetry.
- */
-export const InsightsService = {
-  /**
-   * Generates high-level system metrics to power the Insights Dashboard.
-   */
-  async getSystemMetrics() {
-    try {
-      const supabase = createAdminClient();
+export async function getSchoolWideInsights() {
+  try {
+    const supabase = createAdminClient();
 
-      // 1. Fetch Students count
-      const { count: studentCount, error: studentError } = await supabase
-        .from("students")
-        .select("*", { count: "exact", head: true });
+    const { data: marksData, error: marksError } = await supabase
+      .from("marks")
+      .select("marks_obtained, created_at, subject_id")
+      .limit(1000);
 
-      if (studentError) console.error("Error fetching students count:", studentError);
+    if (marksError) throw marksError;
 
-      // 2. Fetch Teachers count
-      const { count: teacherCount, error: teacherError } = await supabase
-        .from("teachers")
-        .select("*", { count: "exact", head: true });
+    const { data: attendanceData, error: attendError } = await supabase
+      .from("attendance")
+      .select("student_id, status")
+      .limit(1000);
 
-      if (teacherError) console.error("Error fetching teachers count:", teacherError);
+    if (attendError) throw attendError;
 
-      // 3. Fetch recent payments (e.g. to determine revenue stability)
-      const { data: payments, error: paymentError } = await supabase
-        .from("payments")
-        .select("amount_paid, status")
-        .eq("status", "completed");
+    const marks = marksData ?? [];
+    const avg =
+      marks.length > 0
+        ? marks.reduce((acc, m) => acc + (m.marks_obtained ?? 0), 0) / marks.length
+        : 0;
 
-      if (paymentError) console.error("Error fetching payment data:", paymentError);
-
-      const totalRevenue = payments?.reduce((acc, p) => acc + (p.amount_paid || 0), 0) || 0;
-
-      // Generate dynamic metrics for the frontend based on the database
-      const studentAttritionRisk = Math.max(0.5, 5 - ((studentCount || 0) / 100)); // Just a mock math based on count
-      const facultyLoad = teacherCount && studentCount ? ((studentCount / teacherCount) / 30) * 100 : 0; // assuming 1:30 is 100% load
-
-      return {
-        studentCount: studentCount || 0,
-        teacherCount: teacherCount || 0,
-        totalRevenue,
-        metrics: [
-          {
-            id: "1",
-            title: "Student Risk",
-            value: `${studentAttritionRisk.toFixed(1)}%`,
-            status: studentAttritionRisk > 3 ? "High Risk" : "Stable",
-            trend: studentAttritionRisk > 2 ? "up" : "down",
-            confidence: "94%",
-          },
-          {
-            id: "2",
-            title: "Total Revenue",
-            value: `₹${(totalRevenue / 100000).toFixed(1)}L`,
-            status: totalRevenue > 1000 ? "Active" : "Stable",
-            trend: "up",
-            confidence: "88%",
-          },
-          {
-            id: "3",
-            title: "Teacher Workload",
-            value: `${Math.min(100, Math.max(0, facultyLoad)).toFixed(0)}%`,
-            status: facultyLoad > 95 ? "High" : facultyLoad < 60 ? "Low" : "Optimal",
-            trend: "stable",
-            confidence: "91%",
-          },
-        ]
-      };
-    } catch (error) {
-      console.error("Insights getSystemMetrics error:", error);
-      return handleServiceError(error);
+    const bySubject: Record<string, { total: number; count: number }> = {};
+    for (const m of marks) {
+      const key = m.subject_id ?? "unknown";
+      if (!bySubject[key]) bySubject[key] = { total: 0, count: 0 };
+      bySubject[key].total += m.marks_obtained ?? 0;
+      bySubject[key].count += 1;
     }
-  },
+    const subjectHeatmap = Object.entries(bySubject).map(([subject_id, v]) => ({
+      subject_id,
+      average: v.count > 0 ? Math.round(v.total / v.count) : 0,
+      count: v.count,
+    }));
 
-  /**
-   * Identifies the top at-risk students based on dynamic dropout risk calculations.
-   */
-  async getAtRiskStudents() {
-    try {
-      const supabase = createAdminClient();
-      
-      const { data: students, error } = await supabase
-        .from("students")
-        .select(`
-          id,
-          roll_number,
-          profile:profiles (
-            full_name
-          ),
-          class:classes (
-            name
-          )
-        `)
-        .limit(10);
+    const present = (attendanceData ?? []).filter((a) => a.status === "Present").length;
+    const totalAtt = (attendanceData ?? []).length;
+    const attendanceRate = totalAtt > 0 ? Math.round((present / totalAtt) * 100) : 0;
 
-      if (error) {
-        console.error("Error fetching students for risk profiling:", error.message || error, error.details || "", error.hint || "");
-        return [];
-      }
+    return {
+      success: true,
+      data: {
+        schoolAverage: Math.round(avg),
+        totalMarks: marks.length,
+        attendanceRate,
+        attendanceSample: totalAtt,
+        gpaTrends: marksData,
+        attendanceStats: attendanceData,
+        subjectHeatmap,
+      },
+    };
+  } catch (error: unknown) {
+    return { success: false, error: error instanceof Error ? error.message : "Failed to load insights" };
+  }
+}
 
-      const profiled = await Promise.all((students || []).map(async (s: any) => {
-        const risk = await this.predictDropoutRisk(s.id);
-        return {
-          id: s.id,
-          name: s.profile?.full_name || "Student Record",
-          rollNumber: s.roll_number || "N/A",
-          className: s.class ? s.class.name : "Unassigned",
-          riskScore: (risk as any).risk_score || 0,
-          status: (risk as any).status || "Stable",
-          recommendation: (risk as any).recommendation || "Standard monitoring"
-        };
-      }));
+export async function calculateStudentRisk(studentId: string) {
+  try {
+    const supabase = createAdminClient();
 
-      // Sort by highest risk score first
-      return profiled.sort((a, b) => b.riskScore - a.riskScore).slice(0, 5);
-    } catch (e) {
-      console.error("Insights getAtRiskStudents error:", e);
-      return [];
-    }
-  },
+    const { data: marks, error: marksError } = await supabase
+      .from("marks")
+      .select("marks_obtained")
+      .eq("student_id", studentId);
 
-  /**
-   * Predicts the risk of student dropout based on attendance and grade trends.
-   */
-  async predictDropoutRisk(studentId: string) {
-    try {
-      const supabase = createAdminClient();
-      
-      // 1. Fetch attendance rate
-      const { data: attendance } = await supabase
-        .from("attendance")
-        .select("status")
-        .eq("student_id", studentId);
-      
-      const attendanceRate = attendance?.length 
-        ? (attendance.filter(a => a.status === 'present').length / attendance.length) * 100 
+    const { data: attendance, error: attError } = await supabase
+      .from("attendance")
+      .select("status")
+      .eq("student_id", studentId);
+
+    if (marksError || attError) throw new Error("Data fetch error");
+
+    const avgMarks =
+      marks && marks.length > 0
+        ? marks.reduce((acc, m) => acc + (m.marks_obtained ?? 0), 0) / marks.length
+        : 0;
+
+    const attendanceRate =
+      attendance && attendance.length > 0
+        ? (attendance.filter((a) => a.status === "Present").length / attendance.length) * 100
         : 100;
 
-      // 2. Fetch recent marks
-      const { data: marks } = await supabase
-        .from("marks")
-        .select("marks_obtained, max_marks")
-        .eq("student_id", studentId);
-      
-      const averageGrade = marks?.length
-        ? (marks.reduce((acc, m) => acc + (m.marks_obtained / (m.max_marks || 100)), 0) / marks.length) * 100
-        : 80;
+    // Predictive logic: weighted average
+    // Score = (Avg Marks * 0.7) + (Attendance Rate * 0.3)
+    const predictedScore = avgMarks * 0.7 + attendanceRate * 0.3;
+    const trend = Math.round(predictedScore - avgMarks);
+    const risk = predictedScore < 50 ? "High" : predictedScore < 75 ? "Medium" : "Low";
 
-      const riskScore = (100 - attendanceRate) * 0.6 + (100 - averageGrade) * 0.4;
-
-      return {
-        student_id: studentId,
-        risk_score: parseFloat(riskScore.toFixed(2)),
-        status: riskScore > 70 ? "High Risk" : riskScore > 40 ? "Needs Monitoring" : "Stable",
-        recommendation: riskScore > 50 ? "Schedule immediate counselor intervention" : "Continue standard monitoring"
-      };
-    } catch (error) {
-      return handleServiceError(error);
-    }
-  },
-
-  /**
-   * Forecasts upcoming academic results based on current curriculum progress.
-   */
-  async forecastAcademicPerformance(classId: string) {
-    try {
-      const supabase = createAdminClient();
-      
-      // Fetch all marks for this class via student join
-      const { data: students } = await supabase
-        .from("students")
-        .select("id")
-        .eq("class_id", classId);
-      
-      if (!students || students.length === 0) {
-        return { class_id: classId, predicted_average_gpa: 0, status: "No Data" };
-      }
-
-      const { data: marks } = await supabase
-        .from("marks")
-        .select("marks_obtained, max_marks")
-        .in("student_id", students.map(s => s.id));
-
-      const classAverage = marks?.length
-        ? (marks.reduce((acc, m) => acc + (m.marks_obtained / (m.max_marks || 100)), 0) / marks.length) * 4 // scaled to 4.0 GPA
-        : 3.0;
-
-      return {
-        class_id: classId,
-        predicted_average_gpa: parseFloat(classAverage.toFixed(2)),
-        confidence_interval: "±0.15",
-        status: classAverage > 3.5 ? "Exceptional" : classAverage > 2.5 ? "Steady" : "Concerning"
-      };
-    } catch (error) {
-      return handleServiceError(error);
-    }
+    return {
+      success: true,
+      data: {
+        score: Math.round(predictedScore),
+        trend,
+        risk,
+        attendanceRate: Math.round(attendanceRate),
+        avgMarks: Math.round(avgMarks),
+      },
+    };
+  } catch (error: unknown) {
+    return { success: false, error: error instanceof Error ? error.message : "Risk calculation failed" };
   }
-};
+}
+
+export async function handleAIQuery(query: string) {
+  try {
+    const supabase = createAdminClient();
+    const lowerQuery = query.toLowerCase();
+
+    if (lowerQuery.includes("risk") || lowerQuery.includes("failing") || lowerQuery.includes("fail")) {
+      const { data: students, error } = await supabase
+        .from("marks")
+        .select("student_id, marks_obtained")
+        .lt("marks_obtained", 40);
+
+      if (error) throw error;
+      const uniqueStudents = [...new Set((students ?? []).map((s) => s.student_id))];
+      return {
+        success: true,
+        answer: `I found ${uniqueStudents.length} students who are currently at risk of failing based on marks below 40.`,
+        data: uniqueStudents,
+      };
+    }
+
+    if (lowerQuery.includes("attendance") || lowerQuery.includes("absent") || lowerQuery.includes("low attendance")) {
+      const { data, error } = await supabase
+        .from("attendance")
+        .select("student_id, status")
+        .limit(2000);
+
+      if (error) throw error;
+      const rows = data ?? [];
+      const total = rows.length;
+      const present = rows.filter((r) => r.status === "Present").length;
+      const rate = total > 0 ? Math.round((present / total) * 100) : 0;
+      return {
+        success: true,
+        answer: `Overall attendance is ${rate}% across ${total} records. ${rate < 80 ? "This needs attention - consider parent reminders." : "Attendance looks healthy."}`,
+        data: { rate, total },
+      };
+    }
+
+    if (lowerQuery.includes("average") || lowerQuery.includes("grade") || lowerQuery.includes("performance") || lowerQuery.includes("academic")) {
+      const { data: avg, error } = await supabase.from("marks").select("marks_obtained").limit(2000);
+
+      if (error) throw error;
+      const rows = avg ?? [];
+      if (rows.length === 0) {
+        return { success: true, answer: "No marks data available yet to compute an average.", data: { average: 0 } };
+      }
+      const schoolAvg = rows.reduce((acc, m) => acc + (m.marks_obtained ?? 0), 0) / rows.length;
+      return {
+        success: true,
+        answer: `The overall average grade across the school is ${Math.round(schoolAvg)}% based on ${rows.length} marks.`,
+        data: { average: Math.round(schoolAvg) },
+      };
+    }
+
+    if (lowerQuery.includes("fee") || lowerQuery.includes("payment") || lowerQuery.includes("collection")) {
+      const { data, error } = await supabase.from("fee_payments").select("amount_paid").limit(2000);
+      if (error) {
+        return {
+          success: true,
+          answer: "Fee module: focus on pending >5000 reminders, early-payment discount, and payment plans.",
+          data: null,
+        };
+      }
+      const total = (data ?? []).reduce((acc, r) => acc + Number(r.amount_paid ?? 0), 0);
+      return {
+        success: true,
+        answer: `Total collected in sample is ${total}. Send reminders to pending families and offer early-payment incentives.`,
+        data: { total },
+      };
+    }
+
+    return {
+      success: true,
+      answer: "I can help with 'students at risk', 'average grades', 'low attendance', or 'fee collection'. Try one of those.",
+      data: null,
+    };
+  } catch (error: unknown) {
+    return { success: false, error: error instanceof Error ? error.message : "AI query failed" };
+  }
+}
+
+export async function getSystemMetrics() {
+  try {
+    const supabase = createAdminClient();
+    const [{ count: studentCount }, { count: teacherCount }, { data: payments }] = await Promise.all([
+      supabase.from("students").select("*", { count: "exact", head: true }),
+      supabase.from("staff").select("*", { count: "exact", head: true }),
+      supabase.from("fee_payments").select("amount_paid").limit(2000),
+    ]);
+    const totalRevenue = (payments ?? []).reduce((acc, r) => acc + Number(r.amount_paid ?? 0), 0);
+    return {
+      studentCount: studentCount ?? 0,
+      teacherCount: teacherCount ?? 0,
+      totalRevenue,
+      metrics: [],
+    };
+  } catch {
+    return { studentCount: 0, teacherCount: 0, totalRevenue: 0, metrics: [] };
+  }
+}
+
+export async function getAtRiskStudents() {
+  try {
+    const supabase = createAdminClient();
+    const { data } = await supabase.from("marks").select("student_id, marks_obtained").lt("marks_obtained", 40).limit(100);
+    const seen = new Map<string, number>();
+    for (const row of data ?? []) {
+      seen.set(row.student_id, (seen.get(row.student_id) ?? 0) + 1);
+    }
+    return [...seen.entries()].map(([id, count], i) => ({
+      id,
+      name: `Student ${id.slice(0, 6)}`,
+      className: "—",
+      rollNumber: `${i + 1}`,
+      riskScore: Math.min(95, 50 + count * 10),
+      status: "At Risk",
+    }));
+  } catch {
+    return [];
+  }
+}

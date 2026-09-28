@@ -63,8 +63,28 @@ const navigation: NavGroup[] = [
     ],
   },
   {
+    group: "Student Portal",
+    roles: ["student"],
+    items: [
+      { name: "Student Dashboard", href: "/student/dashboard", icon: LayoutDashboard, description: "Academic milestones, GPA, and course overviews" },
+      { name: "My Attendance", href: "/student/attendance", icon: ClipboardCheck, description: "Daily roll-call records and verified presence rates" },
+      { name: "My Grades", href: "/student/grades", icon: Award, description: "Official term evaluations, subject breakdown, and report cards" },
+      { name: "My Timetable", href: "/student/timetable", icon: Calendar, description: "Class subject schedule, period timings, and assigned room" },
+      { name: "Fee Invoices", href: "/student/fees", icon: IndianRupee, description: "Tuition installment schedules and payment receipts" },
+    ],
+  },
+  {
+    group: "Parent Portal",
+    roles: ["parent"],
+    items: [
+      { name: "Parent Dashboard", href: "/parent/dashboard", icon: LayoutDashboard, description: "Progress monitoring for your enrolled children" },
+      { name: "My Children", href: "/parent/children", icon: Users, description: "Detailed academic records, GPAs, and reports for each ward" },
+      { name: "Fee Receipts", href: "/parent/fees", icon: IndianRupee, description: "Tuition invoices, fee balances, and payment vouchers" },
+    ],
+  },
+  {
     group: "Students",
-    roles: ["admin", "teacher", "student"],
+    roles: ["admin", "teacher"],
     items: [
       { name: "Student List", href: "/students/list", icon: GraduationCap, description: "View and manage active student index records" },
       { name: "Enroll", href: "/students/enroll", icon: UserSquare2, description: "Register new students to classes" },
@@ -84,6 +104,8 @@ const navigation: NavGroup[] = [
       { name: "Permissions", href: "/hr/roles", icon: ShieldCheck, roles: ["admin"], description: "Manage system access scopes and permissions" },
       { name: "Attendance", href: "/hr/attendance", icon: ClipboardCheck, roles: ["admin"], description: "Track active staff daily presence logs" },
       { name: "Teacher Dashboard", href: "/teacher/dashboard", icon: Users, roles: ["teacher"], description: "Teacher portal to manage classes and grade sheets" },
+      { name: "My Classrooms", href: "/teacher/classes", icon: BookOpen, roles: ["teacher"], description: "Assigned student cohorts, roll-call attendance, and marks entry" },
+      { name: "Teaching Schedule", href: "/teacher/schedule", icon: Calendar, roles: ["teacher"], description: "Weekly lecture sessions, classroom halls, and timings" },
     ],
   },
   {
@@ -127,6 +149,8 @@ const navigation: NavGroup[] = [
     group: "System",
     roles: ["admin"],
     items: [
+      { name: "Mission Control", href: "/admin/dashboard", icon: LayoutDashboard, description: "Centralized system telemetry, health, and campus metrics" },
+      { name: "System Config", href: "/admin/system", icon: Settings, description: "Global institution settings, metadata, and defaults" },
       { name: "Settings", href: "/settings", icon: Settings, description: "Configure school metadata, terms, and templates" },
       { name: "Audit Logs", href: "/audit", icon: History, description: "Track system access details and logs" },
       { name: "Compliance", href: "/compliance", icon: ShieldCheck, description: "Manage school compliance audits and document vaults" },

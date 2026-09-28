@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
+import { getUserRole } from "@/lib/supabase/rbac";
 
 export const updateSession = async (request: NextRequest) => {
   try {
@@ -32,12 +33,10 @@ export const updateSession = async (request: NextRequest) => {
     );
 
     // This will refresh session if expired - required for Server Components
-    // https://supabase.com/docs/guides/auth/server-side/nextjs
     const {
       data: { user },
       error,
     } = await supabase.auth.getUser();
-
 
     // Prevent redirect loops on /login
     if (error && error.name === 'AuthApiError' && !request.nextUrl.pathname.startsWith('/login')) {
@@ -66,9 +65,21 @@ export const updateSession = async (request: NextRequest) => {
       return NextResponse.redirect(url);
     }
 
-    // Role-based redirection logic (Ported from hardened middleware)
+    // RBAC Enforcement
+    if (user && !isPublicPath) {
+      const { role } = await getUserRole();
+      const pathname = request.nextUrl.pathname;
+
+      // Strict Admin Protection
+      if (pathname.startsWith('/admin') && role !== 'admin') {
+        return NextResponse.redirect(new URL('/unauthorized', request.url));
+      }
+
+      // Dashboard role checks can be expanded here if specific paths need specific roles
+    }
+
+    // Impersonation logic (maintained for admin utility)
     const impersonationId = request.cookies.get("impersonation_user_id")?.value;
-    
     if (user && !request.nextUrl.pathname.startsWith('/unauthorized')) {
         const { data: profile } = await supabase
             .from("profiles")

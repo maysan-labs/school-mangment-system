@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { handleAIQuery } from "@/lib/services/insights";
 
 interface Message {
   id: string;
@@ -79,14 +80,17 @@ export function AIAssistant() {
     setInput("");
     setIsLoading(true);
 
-    // Simulate AI response (replace with real API in production)
-    setTimeout(() => {
+    try {
+      const result = await handleAIQuery(content);
       let response = AI_RESPONSES.default;
-      const lowerContent = content.toLowerCase();
-      
-      if (lowerContent.includes("attendance")) response = AI_RESPONSES.attendance;
-      else if (lowerContent.includes("fee") || lowerContent.includes("payment")) response = AI_RESPONSES.fees;
-      else if (lowerContent.includes("performance") || lowerContent.includes("grade") || lowerContent.includes("academic")) response = AI_RESPONSES.performance;
+      if (result.success && "answer" in result && result.answer) {
+        response = result.answer as string;
+      } else {
+        const lowerContent = content.toLowerCase();
+        if (lowerContent.includes("attendance")) response = AI_RESPONSES.attendance;
+        else if (lowerContent.includes("fee") || lowerContent.includes("payment")) response = AI_RESPONSES.fees;
+        else if (lowerContent.includes("performance") || lowerContent.includes("grade") || lowerContent.includes("academic")) response = AI_RESPONSES.performance;
+      }
 
       const aiMsg: Message = {
         id: uuidv4(),
@@ -96,8 +100,18 @@ export function AIAssistant() {
         type: "insight"
       };
       setMessages(prev => [...prev, aiMsg]);
+    } catch {
+      const aiMsg: Message = {
+        id: uuidv4(),
+        role: "assistant",
+        content: "Sorry, I could not fetch live data. Showing cached insights.",
+        timestamp: new Date(),
+        type: "warning"
+      };
+      setMessages(prev => [...prev, aiMsg]);
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   const handleQuickAction = (prompt: string) => {

@@ -69,8 +69,28 @@ const navigation: NavGroup[] = [
     ],
   },
   {
+    group: "Student Portal",
+    roles: ["student"],
+    items: [
+      { name: "My Dashboard", href: "/student/dashboard", icon: LayoutDashboard },
+      { name: "My Attendance", href: "/student/attendance", icon: ClipboardCheck },
+      { name: "My Grades", href: "/student/grades", icon: Award },
+      { name: "My Timetable", href: "/student/timetable", icon: Calendar },
+      { name: "Fee Invoices", href: "/student/fees", icon: IndianRupee },
+    ],
+  },
+  {
+    group: "Parent Portal",
+    roles: ["parent"],
+    items: [
+      { name: "Parent Dashboard", href: "/parent/dashboard", icon: LayoutDashboard },
+      { name: "My Children", href: "/parent/children", icon: Users },
+      { name: "Fee Receipts", href: "/parent/fees", icon: IndianRupee },
+    ],
+  },
+  {
     group: "Students",
-    roles: ["admin", "teacher", "student"],
+    roles: ["admin", "teacher"],
     items: [
       {
         name: "Students",
@@ -104,6 +124,8 @@ const navigation: NavGroup[] = [
         ]
       },
       { name: "Teacher Dashboard", href: "/teacher/dashboard", icon: Users, roles: ["teacher"] },
+      { name: "My Classrooms", href: "/teacher/classes", icon: BookOpen, roles: ["teacher"] },
+      { name: "Teaching Schedule", href: "/teacher/schedule", icon: Calendar, roles: ["teacher"] },
     ],
   },
   {
@@ -171,6 +193,8 @@ const navigation: NavGroup[] = [
     group: "System",
     roles: ["admin"],
     items: [
+      { name: "Mission Control", href: "/admin/dashboard", icon: LayoutDashboard },
+      { name: "System Config", href: "/admin/system", icon: Settings },
       { name: "Settings", href: "/settings", icon: Settings },
       { name: "Audit Logs", href: "/audit", icon: History },
       { name: "Compliance", href: "/compliance", icon: ShieldCheck },

@@ -177,26 +177,28 @@ export default function InsightsDashboard({ systemMetrics, atRiskStudents = [] }
                             <div className="flex items-center justify-between mb-5">
                                 <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 flex items-center gap-2">
                                     <span className="w-1 h-4 bg-emerald-500 rounded-full" />
-                                    Class Performance
+                                    Class Performance Heatmap
                                 </h3>
                                 <button className="h-8 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-black text-[9px] uppercase tracking-widest px-3 sm:px-4 hover:bg-slate-50 dark:hover:bg-slate-900 transition-all cursor-pointer">View All</button>
                             </div>
-                            <div className="h-[200px] flex items-end gap-1.5 sm:gap-3 overflow-x-auto min-w-0">
-                                {["65", "72", "88", "45", "76", "54", "95", "62"].map((h, i) => (
-                                    <div key={i} className="flex-1 min-w-[28px] sm:min-w-0 flex flex-col items-center gap-2">
-                                        <div className="w-full h-full flex items-end">
-                                            <div
-                                                className="w-full bg-gradient-to-t from-emerald-500 to-emerald-400 rounded-t-lg transition-all hover:from-emerald-400"
-                                                style={{ height: `${h}%` }}
-                                            />
+                            <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+                                {["90", "85", "70", "45", "80", "60", "95", "50"].map((score, i) => {
+                                    const s = parseInt(score);
+                                    const color = s > 80 ? "bg-emerald-500" : s > 60 ? "bg-emerald-300" : s > 40 ? "bg-amber-400" : "bg-rose-500";
+                                    return (
+                                        <div key={i} className="group relative flex flex-col items-center gap-1">
+                                            <div className={cn("w-full aspect-square rounded-lg transition-all hover:scale-105 cursor-pointer shadow-sm", color)} />
+                                            <span className="text-[8px] sm:text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase">C{i + 1}</span>
+                                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-slate-900 text-white text-[8px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                                {score}% Avg
+                                            </div>
                                         </div>
-                                        <span className="text-[8px] sm:text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase truncate max-w-full text-center">C{i + 1}</span>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
 
-                        <div>
+                        <div className="space-y-4">
                             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5">
                                 <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-4">Summary</h3>
                                 <div className="space-y-3">
@@ -213,6 +215,18 @@ export default function InsightsDashboard({ systemMetrics, atRiskStudents = [] }
                                         <span className="text-xs font-black text-slate-900 dark:text-white">₹{(totalRevenue / 100000).toFixed(1)}L</span>
                                     </div>
                                 </div>
+                            </div>
+                            <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-100 dark:border-amber-800/30 rounded-xl p-4">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <AlertTriangle className="h-3 w-3 text-amber-600" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-amber-700 dark:text-amber-400">Smart Action</span>
+                                </div>
+                                <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                    Notice: 15% drop in attendance for Grade 9 - Action Recommended
+                                </p>
+                                <button className="mt-3 w-full py-2 bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-800 rounded-lg text-[9px] font-black uppercase tracking-widest text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer">
+                                    Resolve Now
+                                </button>
                             </div>
                         </div>
                     </div>

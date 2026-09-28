@@ -14,24 +14,40 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { useAIPerformanceSim } from "@/lib/simulation/telemetry";
+import { calculateStudentRisk } from "@/lib/services/insights";
 
-export function PerformancePredictor() {
+
+export function PerformancePredictor({ studentId }: { studentId?: string }) {
   const [analyzing, setAnalyzing] = useState(true);
-  const { score, trend } = useAIPerformanceSim();
+  const [prediction, setPrediction] = useState<{
+    score: number;
+    trend: number;
+    risk: string;
+    attendanceRate?: number;
+    avgMarks?: number;
+  } | null>(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => setAnalyzing(false), 2000);
-    return () => clearTimeout(timer);
-  }, []);
+    async function fetchPrediction() {
+      if (!studentId) {
+        // Fallback for demo or global view
+        setAnalyzing(false);
+        return;
+      }
+      const result = await calculateStudentRisk(studentId);
+      if (result.success && result.data) {
+        setPrediction(result.data);
+      }
+      setAnalyzing(false);
+    }
+    fetchPrediction();
+  }, [studentId]);
 
   if (analyzing) {
     return (
-      <Card className="border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/50 min-h-[400px] flex items-center justify-center rounded-[2rem] soft-shadow-lg">
+      <Card className="border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/50 min-h-[400px] flex items-center justify-center rounded-[2rem]">
         <div className="flex flex-col items-center gap-y-4">
-          <div className="relative">
-            <Sparkles className="h-10 w-10 text-blue-500 animate-pulse" />
-          </div>
+          <Sparkles className="h-10 w-10 text-blue-500 animate-pulse" />
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.4em] animate-pulse">
             Generating Insights...
           </p>
@@ -39,6 +55,17 @@ export function PerformancePredictor() {
       </Card>
     );
   }
+
+  if (!prediction) {
+    return (
+      <Card className="border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/50 rounded-[2rem] p-8">
+        <p className="text-xs text-slate-500 font-medium">Select a student to view predictive analytics.</p>
+      </Card>
+    );
+  }
+
+  const { score, trend, risk } = prediction;
+  const riskColor = risk === "High" ? "text-rose-600 dark:text-rose-400" : risk === "Medium" ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400";
 
   return (
     <Card className="border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/50 text-foreground overflow-hidden group rounded-[2rem] soft-shadow-lg relative">
@@ -89,7 +116,10 @@ export function PerformancePredictor() {
                 <CheckCircle2 className="h-3.5 w-3.5" />
                 Risk Level
               </div>
-              <p className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 uppercase">Minimal</p>
+              <div className="flex items-center gap-x-2">
+                <p className={`text-2xl font-bold tracking-tight uppercase ${riskColor}`}>{risk}</p>
+                <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-black uppercase tracking-tighter">{risk} Risk</Badge>
+              </div>
               <p className="text-[10px] font-bold uppercase tracking-tight text-slate-400 mt-1">Consistency Rating: High</p>
             </div>
           </div>

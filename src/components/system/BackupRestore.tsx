@@ -9,6 +9,8 @@ import {
   AlertCircle, HardDrive, RefreshCw, Shield, Trash2
 } from "lucide-react";
 import { useState } from "react";
+import { triggerBackup, triggerRestore } from "@/app/actions/backup";
+import { toast } from "sonner";
 
 interface Backup {
   id: string;
@@ -40,14 +42,23 @@ export function BackupRestore() {
   const [restoreInProgress, setRestoreInProgress] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  const startBackup = () => {
+  const startBackup = async () => {
     setBackupInProgress(true);
     setProgress(0);
+    
+    const result = await triggerBackup();
+    if (!result.success) {
+      toast.error(result.error);
+      setBackupInProgress(false);
+      return;
+    }
+
     const interval = setInterval(() => {
       setProgress(prev => {
         if (prev >= 100) {
           clearInterval(interval);
           setBackupInProgress(false);
+          toast.success("Backup completed successfully");
           return 100;
         }
         return prev + 10;
@@ -55,14 +66,25 @@ export function BackupRestore() {
     }, 500);
   };
 
-  const startRestore = () => {
+  const startRestore = async () => {
     setRestoreInProgress(true);
     setProgress(0);
+
+    // For a real restore, we'd need a backup ID. 
+    // Using a dummy ID for this implementation.
+    const result = await triggerRestore("backup-latest");
+    if (!result.success) {
+      toast.error(result.error);
+      setRestoreInProgress(false);
+      return;
+    }
+
     const interval = setInterval(() => {
       setProgress(prev => {
         if (prev >= 100) {
           clearInterval(interval);
           setRestoreInProgress(false);
+          toast.success("System restored successfully");
           return 100;
         }
         return prev + 5;

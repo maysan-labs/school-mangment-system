@@ -1,10 +1,18 @@
 import { createClient } from "@/lib/supabase/server";
 import { toast } from "sonner";
+import { authorizeAdmin } from "@/lib/supabase/rbac";
 
 export async function updateUserRole(userId: string, role: string) {
+  const { userId: adminId } = await authorizeAdmin();
   const supabase = await createClient();
   
   try {
+    const { data: oldRole } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .single();
+
     const { error } = await supabase
       .from("user_roles")
       .upsert({
@@ -26,6 +34,7 @@ export async function updateUserRole(userId: string, role: string) {
 }
 
 export async function resetUserAccess(userId: string) {
+  const { userId: adminId } = await authorizeAdmin();
   const supabase = await createClient();
   
   try {
@@ -36,9 +45,6 @@ export async function resetUserAccess(userId: string) {
       .eq("user_id", userId);
 
     if (deleteError) throw deleteError;
-
-    // Optionally reset the staff login info
-    // This would require additional logic depending on requirements
 
     return { success: true, message: "Access reset successfully" };
   } catch (error: any) {
